@@ -1,0 +1,13 @@
+#!/bin/sh
+# Shim executed by the base image's docker-entrypoint.sh (whose CMD is
+# apache2-foreground) AFTER it has finished WordPress setup — copying core
+# files into /var/www/html and generating wp-config.php.
+#
+# Why this exists: the official docker-entrypoint.sh only performs that setup
+# when $1 starts with "apache2". If we had changed CMD to supervisord directly,
+# the entrypoint would skip setup and /var/www/html would never receive the WP
+# files (which is exactly the 404 bug this fixes). So we keep
+# CMD=apache2-foreground, let setup run, and replace this binary with a hand-off
+# to supervisord. supervisord then runs the REAL apache (apache2-foreground.real)
+# together with sshd and OliveTin.
+exec /usr/bin/supervisord -n -c /etc/supervisor/conf.d/supervisord.conf

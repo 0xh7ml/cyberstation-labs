@@ -1,0 +1,71 @@
+listenAddressSingleHTTPFrontend: 127.0.0.1:1337
+logLevel: "INFO"
+actions:
+  - title: Ping the Internet
+    shell: ping -c 3 1.1.1.1
+    icon: ping
+    popupOnStart: execution-dialog-stdout-only
+  - title: Check disk space
+    icon: disk
+    shell: df -h /media
+    popupOnStart: execution-dialog-stdout-only
+  - title: check dmesg logs
+    shell: dmesg | tail
+    icon: logs
+    popupOnStart: execution-dialog
+  - title: date
+    shell: date
+    id: date
+    timeout: 6
+    icon: clock
+    popupOnStart: execution-button
+    maxRate:
+      - limit: 3
+        duration: 1m
+  # Intentionally vulnerable action: db_pass is type: password and is
+  # interpolated UNSANITIZED into shell:, so shell metacharacters in it run as
+  # whatever user OliveTin runs as. In this image OliveTin runs as root (see
+  # supervisord.conf), so injection here is the intended root primitive.
+  - title: Backup Database
+    id: backup_database
+    icon: "⛁"
+    shell: "mysqldump -u {{ db_user }} -p'{{ db_pass }}' {{ db_name }} > /opt/backups/backup.sql"
+    popupOnStart: execution-dialog
+    arguments:
+      - name: db_user
+        type: ascii_identifier
+        default: backup_svc
+      - name: db_pass
+        type: password
+      - name: db_name
+        type: ascii_identifier
+        default: production
+
+entities:
+  - file: entities/servers.yaml
+    name: server
+  - file: entities/containers.json
+    name: container
+
+authRequireGuestsToLogin: false
+authLocalUsers:
+  enabled: true
+
+defaultPolicy:
+  showDiagnostics: true
+  showLogList: true
+
+defaultPermissions:
+  view: true
+  exec: true
+  logs: true
+
+accessControlLists:
+  - name: admin_acl
+    matchUsergroups: ["admins"]
+    policy:
+      showDiagnostics: true
+    permissions:
+      view: true
+      exec: true
+      logs: true

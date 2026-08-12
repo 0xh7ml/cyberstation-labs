@@ -1,0 +1,92 @@
+name: wpsql
+services:
+  db:
+    image: mysql:8.0
+    # Use mysql_native_password (MySQL 8.0 defaults to caching_sha2_password).
+    # Broadly compatible with older MySQL clients / phpMyAdmin a solver might
+    # use against this box. (Provisioning itself uses PHP/mysqli via wp-cli,
+    # which supports either plugin.)
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+      MYSQL_ROOT_PASSWORD: rootpw
+    volumes:
+      # default init only (no FILE grant) — see init.sql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "--silent"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    networks:
+      - backend
+
+  # SINGLE-OS target: WordPress (apache/www-data) + devops sshd + loopback
+  # OliveTin all in one image (./target), under supervisord. This replaces the
+  # old split wordpress + opsbox pair. Only 8888:80 and 2222:22 are published;
+  # OliveTin (127.0.0.1:1337) is never published and is firewall-blocked from
+  # www-data, so the only way in is an authenticated devops SSH local-forward.
+  target:
+    build: ./target
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8888:80"    # WordPress (player -> WP RCE foothold)
+      - "2222:22"    # devops SSH (post-crack; -L forward to OliveTin)
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_CONFIG_EXTRA: |
+        define('AUTOMATIC_UPDATER_DISABLED', true);
+    volumes:
+      - wp_data:/var/www/html
+    # Needed by target/init-firewall.sh so the iptables owner-match rule that
+    # blocks www-data from 127.0.0.1:1337 can be installed. Scoped to loopback
+    # only; does not expose any extra host surface.
+    cap_add:
+      - NET_ADMIN
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/wp-login.php"]
+      interval: 3s
+      timeout: 5s
+      retries: 60
+    networks:
+      - frontend   # public: player -> WordPress (:80)
+      - backend    # target -> db:3306
+
+  # one-shot provisioning: WP core install + Storefront + WooCommerce + demo products
+  wpcli:
+    image: wordpress:cli-2.11
+    depends_on:
+      target:
+        condition: service_healthy
+    user: "33:33"   # www-data, matches the target image's file ownership
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ./setup.sh:/setup.sh:ro
+      - ./oldsite_backup.sql:/oldsite_backup.sql:ro
+    entrypoint: ["sh", "/setup.sh"]
+    restart: "no"
+    networks:
+      - backend    # to reach db:3306
+      - frontend   # needs internet to fetch WooCommerce/Storefront from wordpress.org
+
+volumes:
+  db_data:
+  wp_data:
+
+networks:
+  frontend:
+  backend:
+    internal: true   # db never reachable from outside the compose network
