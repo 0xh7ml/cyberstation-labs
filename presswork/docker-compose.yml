@@ -56,8 +56,12 @@ services:
         // from the Host header is a real-world footgun (password-reset/cache
         // poisoning), but fine on an intentionally-vulnerable box. The
         // localhost:8888 fallback covers wp-cli, which has no HTTP_HOST.
-        define('WP_HOME', 'http://' . ($_SERVER['HTTP_HOST'] ?? 'localhost:8888'));
-        define('WP_SITEURL', 'http://' . ($_SERVER['HTTP_HOST'] ?? 'localhost:8888'));
+        // NOTE: `$$` below is Compose escaping for a literal `$` — compose
+        // interpolates single-`$` vars against the HOST shell before this
+        // value reaches the container, which would blank out $_SERVER and
+        // produce a PHP parse error in wp-config.php.
+        define('WP_HOME', 'http://' . ($$_SERVER['HTTP_HOST'] ?? 'localhost:8888'));
+        define('WP_SITEURL', 'http://' . ($$_SERVER['HTTP_HOST'] ?? 'localhost:8888'));
     volumes:
       - wp_data:/var/www/html
     # Needed by target/init-firewall.sh so the iptables owner-match rule that
