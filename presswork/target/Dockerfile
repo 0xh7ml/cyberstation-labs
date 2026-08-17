@@ -99,9 +99,12 @@ COPY apache2-foreground /usr/local/bin/apache2-foreground
 RUN chmod +x /usr/local/bin/apache2-foreground
 
 # --- placeholder flags (swapped for real values only at final packaging) ------
-RUN printf 'HTB{fake_user_flag_replace_me}\n' > /home/devops/user.txt && \
-    chown devops:devops /home/devops/user.txt && chmod 600 /home/devops/user.txt && \
-    printf 'HTB{fake_root_flag_replace_me}\n' > /root/root.txt && \
+RUN USER_FLAG=$(openssl rand -hex 16) && \
+    ROOT_FLAG=$(openssl rand -hex 16) && \
+    printf 'FLAG{%s}\n' "$USER_FLAG" > /home/devops/user.txt && \
+    chown devops:devops /home/devops/user.txt && \
+    chmod 600 /home/devops/user.txt && \
+    printf 'FLAG{%s}\n' "$ROOT_FLAG" > /root/root.txt && \
     chmod 600 /root/root.txt
 
 EXPOSE 80 22
