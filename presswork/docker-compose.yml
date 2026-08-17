@@ -1,4 +1,9 @@
-name: wpsql
+# File format 2.4 (not bare Spec): works under both docker-compose v1 and
+# `docker compose` v2, and keeps `depends_on: condition: service_healthy`
+# (unsupported in 3.x files under v1). Project name comes from .env
+# (COMPOSE_PROJECT_NAME=wpsql), since the top-level `name:` key is
+# Compose-v2-only.
+version: "2.4"
 services:
   db:
     image: mysql:8.0
@@ -44,6 +49,15 @@ services:
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_CONFIG_EXTRA: |
         define('AUTOMATIC_UPDATER_DISABLED', true);
+        // Serve the store under whatever Host the browser used (localhost:8888,
+        // the VM/LAN IP, or any hostname the player points at it) instead of
+        // 301-ing every other host to the siteurl baked in at install time
+        // (http://localhost:8888). Standard lab convenience — deriving URLs
+        // from the Host header is a real-world footgun (password-reset/cache
+        // poisoning), but fine on an intentionally-vulnerable box. The
+        // localhost:8888 fallback covers wp-cli, which has no HTTP_HOST.
+        define('WP_HOME', 'http://' . ($_SERVER['HTTP_HOST'] ?? 'localhost:8888'));
+        define('WP_SITEURL', 'http://' . ($_SERVER['HTTP_HOST'] ?? 'localhost:8888'));
     volumes:
       - wp_data:/var/www/html
     # Needed by target/init-firewall.sh so the iptables owner-match rule that
