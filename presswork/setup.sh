@@ -3,6 +3,7 @@ set -e
 
 
 vm_ip=ip -4 route get 1.1.1.1 | awk '{print $7; exit}'
+password=$(openssl rand -hex 16)
 cd /var/www/html
 
 echo "== Waiting for WordPress DB to accept a connection =="
@@ -23,7 +24,7 @@ if ! wp core is-installed --path=/var/www/html 2>/dev/null; then
     --url="http://$vm_ip:8888" \
     --title="CircuitCart Store" \
     --admin_user=admin \
-    --admin_password=admin123 \
+    --admin_password=$password \
     --admin_email=admin@example.com \
     --skip-email
 else
@@ -91,4 +92,4 @@ echo "== DONE =="
 echo "Store URL:   http://$vm_ip:8888/"
 echo "Admin URL:   http://$vm_ip:8888/wp-admin/"
 echo "Admin user:  admin"
-echo "Admin pass:  admin123"
+echo "Admin pass:  $password"
