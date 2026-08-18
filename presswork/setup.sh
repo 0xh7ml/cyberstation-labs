@@ -87,10 +87,6 @@ chmod 644 wp-content/uploads/2025/migration-backup/oldsite_backup.sql
 printf 'Options -Indexes\n' > wp-content/uploads/2025/migration-backup/.htaccess
 chmod 644 wp-content/uploads/2025/migration-backup/.htaccess
 
-echo 'define('WP_HOME', 'http://' .$_SERVER['HTTP_HOST']);' >> wp-config.php
-echo 'define('WP_SITEURL', 'http://' . $_SERVER['HTTP_HOST']);' >> wp-config.php
-
-
 echo "== DONE =="
 echo "Store URL:   http://$vm_ip:8888/"
 echo "Admin URL:   http://$vm_ip:8888/wp-admin/"
