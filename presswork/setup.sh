@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+
+vm_ip=ip -4 route get 1.1.1.1 | awk '{print $7; exit}'
 cd /var/www/html
 
 echo "== Waiting for WordPress DB to accept a connection =="
@@ -18,7 +20,7 @@ echo "== Installing WordPress core (if not already installed) =="
 if ! wp core is-installed --path=/var/www/html 2>/dev/null; then
   wp core install \
     --path=/var/www/html \
-    --url="http://localhost:8888" \
+    --url="http://$vm_ip:8888" \
     --title="CircuitCart Store" \
     --admin_user=admin \
     --admin_password=admin123 \
@@ -90,7 +92,7 @@ echo 'define('WP_SITEURL', 'http://' . $_SERVER['HTTP_HOST']);' >> wp-config.php
 
 
 echo "== DONE =="
-echo "Store URL:   http://localhost:8888/"
-echo "Admin URL:   http://localhost:8888/wp-admin/"
+echo "Store URL:   http://$vm_ip:8888/"
+echo "Admin URL:   http://$vm_ip:8888/wp-admin/"
 echo "Admin user:  admin"
 echo "Admin pass:  admin123"
