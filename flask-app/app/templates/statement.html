@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureBank — Transaction Statement</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .statement-box {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 24px;
+        }
+        h1 { color: #1a3c5e; }
+        .remark {
+            background: #eef4ff;
+            border-left: 4px solid #1a3c5e;
+            padding: 12px 16px;
+            margin-top: 16px;
+            border-radius: 0 4px 4px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="statement-box">
+        <h1>SecureBank Labs</h1>
+        <h2>Transaction Remark</h2>
+        <!-- The | safe filter disables autoescaping, making SSTI and XSS possible -->
+        <div class="remark">
+            {{ remark | safe }}
+        </div>
+    </div>
+</body>
+</html>

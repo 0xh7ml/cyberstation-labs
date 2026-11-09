@@ -1,0 +1,67 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - flask-app
+      - django-app
+      - go-report-svc
+      - frontend
+    networks:
+      - securebank
+
+  frontend:
+    build: ./frontend
+    expose:
+      - "3000"
+    networks:
+      - securebank
+
+  flask-app:
+    build: ./flask-app
+    expose:
+      - "5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      # Intentionally weak secret for A04 Lab 08
+      - SECRET_KEY=secret
+      - JWT_SECRET=secret
+      - DATABASE_URL=sqlite:////app/data/securebank.db
+    volumes:
+      - flask-data:/app/data
+      - flask-uploads:/app/uploads
+    networks:
+      - securebank
+
+  django-app:
+    build: ./django-app
+    expose:
+      - "8000"
+    environment:
+      # Intentionally misconfigured for A02
+      - DJANGO_SETTINGS_MODULE=banking.settings.dev
+      - SECRET_KEY=django-insecure-training-key-do-not-use
+    volumes:
+      - django-data:/app/data
+    networks:
+      - securebank
+
+  go-report-svc:
+    build: ./go-report-svc
+    expose:
+      - "8080"
+    networks:
+      - securebank
+
+volumes:
+  flask-data:
+  flask-uploads:
+  django-data:
+
+networks:
+  securebank:
+    driver: bridge

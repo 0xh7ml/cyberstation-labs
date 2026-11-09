@@ -1,0 +1,21 @@
+SecureBank Labs — Backup Artifact Note
+=======================================
+
+This directory contains a backup.zip file generated at container startup by
+the seed_data management command.
+
+backup.zip contents:
+  - django.db  (SQLite database with all seeded users, accounts, and transfers)
+
+This file is intentionally exposed here to demonstrate A02: Cryptographic
+Failures / Security Misconfiguration (OWASP Top 10).
+
+In a real application, database backups must NEVER be placed in a web-
+accessible directory. The backup.zip in this lab can be downloaded via:
+
+  GET /backup.zip
+
+...and contains plaintext password hashes and all account balances.
+
+Lab exercise: download backup.zip, extract django.db, open it with any
+SQLite browser, and inspect the accounts_bankuser table.
